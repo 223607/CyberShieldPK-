@@ -30,6 +30,9 @@ import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { AuthModal } from './components/AuthModal';
 import { UserDashboardModal } from './components/UserDashboardModal';
 import { UpgradeModal } from './components/UpgradeModal';
+import { CertificateModal } from './components/CertificateModal';
+import { FallingStarsCelebration } from './components/FallingStarsCelebration';
+import { DailyThreatFeedSection } from './components/DailyThreatFeedSection';
 
 import { DOMAINS } from './data/domains';
 import { Course, Lab, Article, Project, SecurityService, ResourceItem, DomainInfo } from './types';
@@ -37,6 +40,7 @@ import { Course, Lab, Article, Project, SecurityService, ResourceItem, DomainInf
 export default function App() {
   // Navigation & Modals State
   const [activeCourse, setActiveCourse] = useState<Course | null>(null);
+  const [pendingCourse, setPendingCourse] = useState<Course | null>(null);
   const [activeLab, setActiveLab] = useState<Lab | null>(null);
   const [activeArticle, setActiveArticle] = useState<Article | null>(null);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
@@ -49,23 +53,27 @@ export default function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [dashboardModalOpen, setDashboardModalOpen] = useState(false);
   const [upgradeModalCourseId, setUpgradeModalCourseId] = useState<string | null>(null);
+  
+  // Certificate & Celebration States
+  const [certificateCourse, setCertificateCourse] = useState<Course | null>(null);
+  const [showFallingStars, setShowFallingStars] = useState<boolean>(false);
 
   // User & Learning State with local persistence
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role?: string } | null>(() => {
     try {
       const saved = localStorage.getItem('cybershield_user');
-      return saved ? JSON.parse(saved) : null;
+      return saved ? JSON.parse(saved) : { name: 'Muhammad Zaib Zafar', email: 'zaibzafar936@gmail.com', role: 'Security Specialist' };
     } catch {
-      return null;
+      return { name: 'Muhammad Zaib Zafar', email: 'zaibzafar936@gmail.com', role: 'Security Specialist' };
     }
   });
 
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('cybershield_enrolled_courses');
-      return saved ? JSON.parse(saved) : ['course-web-sec-101'];
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return ['course-web-sec-101'];
+      return [];
     }
   });
 
@@ -116,6 +124,8 @@ export default function App() {
         setAuthModalOpen(false);
         setDashboardModalOpen(false);
         setUpgradeModalCourseId(null);
+        setCertificateCourse(null);
+        setShowFallingStars(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -143,8 +153,47 @@ export default function App() {
         ? prev.filter(id => id !== lessonId) 
         : [...prev, lessonId];
       localStorage.setItem('cybershield_completed_lessons', JSON.stringify(next));
+
+      // Trigger falling stars celebration if this completed the entire course
+      if (activeCourse) {
+        const allCourseLessons = activeCourse.chapters.flatMap(c => c.lessons);
+        const willBeComplete = allCourseLessons.length > 0 && allCourseLessons.every(l => next.includes(l.id));
+        if (willBeComplete && !prev.includes(lessonId)) {
+          setShowFallingStars(true);
+        }
+      }
+
       return next;
     });
+  };
+
+  const handleCompleteAllLessons = (lessonIds: string[]) => {
+    setCompletedLessonIds(prev => {
+      const combined = Array.from(new Set([...prev, ...lessonIds]));
+      localStorage.setItem('cybershield_completed_lessons', JSON.stringify(combined));
+      return combined;
+    });
+    setShowFallingStars(true);
+  };
+
+  const handleResetCourseProgress = (lessonIds: string[]) => {
+    setCompletedLessonIds(prev => {
+      const filtered = prev.filter(id => !lessonIds.includes(id));
+      localStorage.setItem('cybershield_completed_lessons', JSON.stringify(filtered));
+      return filtered;
+    });
+  };
+
+  const handleOpenCertificate = (course: Course) => {
+    setCertificateCourse(course);
+    setShowFallingStars(true);
+  };
+
+  const handleTriggerFallingStars = () => {
+    setShowFallingStars(false);
+    setTimeout(() => {
+      setShowFallingStars(true);
+    }, 30);
   };
 
   const handleCompleteLab = (labId: string) => {
@@ -171,8 +220,19 @@ export default function App() {
     });
   };
 
+  const handleStartCourse = (course: Course) => {
+    const isVerified = localStorage.getItem('cybershield_verified_session') === 'true';
+    if (!isVerified) {
+      setPendingCourse(course);
+      setAuthModalOpen(true);
+    } else {
+      setActiveCourse(course);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('cybershield_user');
+    localStorage.removeItem('cybershield_verified_session');
     setCurrentUser(null);
     setDashboardModalOpen(false);
   };
@@ -215,10 +275,15 @@ export default function App() {
 
         {/* 4. Academy (Courses & Modules) */}
         <AcademySection
-          onSelectCourse={(course) => setActiveCourse(course)}
+          onSelectCourse={(course) => handleStartCourse(course)}
           onUpgrade={(courseId) => setUpgradeModalCourseId(courseId || null)}
           isEnrolled={(courseId) => enrolledCourseIds.includes(courseId)}
+          completedLessonIds={completedLessonIds}
+          onGetCertificate={handleOpenCertificate}
         />
+
+        {/* Live Daily Threat Feed & Upcoming Curriculums */}
+        <DailyThreatFeedSection />
 
         {/* 5. Hands-on Cyber Labs */}
         <LabsSection
@@ -277,6 +342,10 @@ export default function App() {
           onToggleLessonCompletion={handleToggleLessonCompletion}
           userNotes={userNotes}
           onSaveNote={handleSaveNote}
+          onGetCertificate={handleOpenCertificate}
+          onTriggerFallingStars={handleTriggerFallingStars}
+          onCompleteAllLessons={handleCompleteAllLessons}
+          onResetCourseProgress={handleResetCourseProgress}
         />
       )}
 
@@ -328,8 +397,9 @@ export default function App() {
         <DomainDetailModal
           domain={activeDomain}
           onClose={() => setActiveDomain(null)}
-          onSelectCourse={(c) => setActiveCourse(c)}
+          onSelectCourse={(c) => handleStartCourse(c)}
           onSelectLab={(l) => setActiveLab(l)}
+          onSelectArticle={(art) => setActiveArticle(art)}
         />
       )}
 
@@ -344,7 +414,7 @@ export default function App() {
       {searchModalOpen && (
         <GlobalSearchModal
           onClose={() => setSearchModalOpen(false)}
-          onSelectCourse={(c) => setActiveCourse(c)}
+          onSelectCourse={(c) => handleStartCourse(c)}
           onSelectLab={(l) => setActiveLab(l)}
           onSelectArticle={(a) => setActiveArticle(a)}
           onSelectProject={(p) => setActiveProject(p)}
@@ -352,11 +422,21 @@ export default function App() {
         />
       )}
 
-      {/* Authentication Modal */}
+      {/* Authentication & 6-Digit OTP Verification Modal */}
       {authModalOpen && (
         <AuthModal
-          onClose={() => setAuthModalOpen(false)}
-          onLoginSuccess={(user) => setCurrentUser(user)}
+          targetCourse={pendingCourse}
+          onClose={() => {
+            setAuthModalOpen(false);
+            setPendingCourse(null);
+          }}
+          onLoginSuccess={(user) => {
+            setCurrentUser(user);
+            if (pendingCourse) {
+              setActiveCourse(pendingCourse);
+              setPendingCourse(null);
+            }
+          }}
         />
       )}
 
@@ -371,6 +451,8 @@ export default function App() {
           completedLabIds={completedLabIds}
           userNotes={userNotes}
           onSelectCourse={(c) => setActiveCourse(c)}
+          onViewCertificate={handleOpenCertificate}
+          onTriggerStars={handleTriggerFallingStars}
         />
       )}
 
@@ -380,6 +462,25 @@ export default function App() {
           courseId={upgradeModalCourseId}
           onClose={() => setUpgradeModalCourseId(null)}
           onEnrollSuccess={(cId) => handleEnrollSuccess(cId)}
+        />
+      )}
+
+      {/* Official Cryptographic Course Certificate Modal */}
+      {certificateCourse && (
+        <CertificateModal
+          course={certificateCourse}
+          recipientName={currentUser?.name || 'Muhammad Zaib Zafar'}
+          onClose={() => setCertificateCourse(null)}
+          onTriggerStars={handleTriggerFallingStars}
+        />
+      )}
+
+      {/* Falling Colorful Stars Celebration: Auto-plays once and closes automatically */}
+      {showFallingStars && (
+        <FallingStarsCelebration
+          onClose={() => setShowFallingStars(false)}
+          durationMs={2800}
+          autoClose={true}
         />
       )}
     </div>

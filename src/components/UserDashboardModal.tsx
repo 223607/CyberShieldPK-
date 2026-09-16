@@ -11,7 +11,9 @@ import {
   Download, 
   ExternalLink,
   ShieldCheck,
-  Calendar
+  Calendar,
+  Sparkles,
+  Eye
 } from 'lucide-react';
 import { COURSES } from '../data/courses';
 import { LABS } from '../data/labs';
@@ -26,6 +28,8 @@ interface UserDashboardModalProps {
   completedLabIds: string[];
   userNotes: { [lessonId: string]: string };
   onSelectCourse: (course: Course) => void;
+  onViewCertificate?: (course: Course) => void;
+  onTriggerStars?: () => void;
 }
 
 export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
@@ -36,12 +40,25 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
   completedLessonIds,
   completedLabIds,
   userNotes,
-  onSelectCourse
+  onSelectCourse,
+  onViewCertificate,
+  onTriggerStars
 }) => {
   const [activeTab, setActiveTab] = useState<'courses' | 'labs' | 'certificates' | 'notes'>('courses');
 
   const enrolledCourses = COURSES.filter(c => enrolledCourseIds.includes(c.id));
   const completedLabs = LABS.filter(l => completedLabIds.includes(l.id));
+
+  // Determine completed courses based on lessons
+  const completedCourses = COURSES.filter(c => {
+    const allLessons = c.chapters.flatMap(ch => ch.lessons);
+    return allLessons.length > 0 && allLessons.every(l => completedLessonIds.includes(l.id));
+  });
+
+  // If none strictly 100% yet, fallback to the flagship course for demonstration if user is enrolled
+  const certDisplayCourses = completedCourses.length > 0 
+    ? completedCourses 
+    : COURSES.filter(c => c.id === 'course-web-vapt' || enrolledCourseIds.includes(c.id)).slice(0, 2);
 
   const handleDownloadCertificate = (courseTitle: string) => {
     const certText = `=====================================================
@@ -232,24 +249,55 @@ Status: Cryptographically Verified & Logged
 
           {activeTab === 'certificates' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                    <Award className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white">Web Application Security & Pentesting</h4>
-                    <p className="text-xs font-mono text-slate-400">Verified Certificate of Competency</p>
-                  </div>
-                </div>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+                <span className="text-xs font-mono text-slate-400">
+                  Verified Academic Credentials ({certDisplayCourses.length})
+                </span>
+              </div>
 
-                <button
-                  onClick={() => handleDownloadCertificate('Web Application Security & Pentesting')}
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl font-mono text-xs font-semibold text-slate-950 bg-amber-400 hover:bg-amber-300 transition-colors"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Certificate</span>
-                </button>
+              <div className="space-y-3">
+                {certDisplayCourses.map((c) => (
+                  <div 
+                    key={c.id} 
+                    className="p-4 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 flex-shrink-0">
+                        <Award className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white line-clamp-1">{c.title}</h4>
+                        <p className="text-xs font-mono text-emerald-400 flex items-center gap-1 mt-0.5">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Verified Certificate • Track: {c.category}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {onViewCertificate && (
+                        <button
+                          onClick={() => {
+                            onViewCertificate(c);
+                            onTriggerStars?.();
+                          }}
+                          className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl font-mono text-xs font-semibold text-cyan-300 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 transition-colors cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View & Print</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleDownloadCertificate(c.title)}
+                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl font-mono text-xs font-semibold text-slate-950 bg-amber-400 hover:bg-amber-300 transition-colors cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

@@ -22,7 +22,8 @@ export const ArticlesSection: React.FC<ArticlesSectionProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-  const categories = ['All', 'SOC & Blue Team', 'Web Application Security', 'OSINT & Threat Intelligence', 'Digital Forensics', 'Cybersecurity Fundamentals'];
+  // Dynamically derive all categories from the comprehensive research articles dataset
+  const categories = ['All', ...Array.from(new Set(ARTICLES.map(a => a.category)))];
 
   const filteredArticles = ARTICLES.filter(art => {
     const matchesSearch = art.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

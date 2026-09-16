@@ -20,12 +20,16 @@ interface AcademySectionProps {
   onSelectCourse: (course: Course) => void;
   onUpgrade: (courseId?: string) => void;
   isEnrolled: (courseId: string) => boolean;
+  completedLessonIds?: string[];
+  onGetCertificate?: (course: Course) => void;
 }
 
 export const AcademySection: React.FC<AcademySectionProps> = ({
   onSelectCourse,
   onUpgrade,
-  isEnrolled
+  isEnrolled,
+  completedLessonIds = [],
+  onGetCertificate
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
@@ -71,6 +75,60 @@ export const AcademySection: React.FC<AcademySectionProps> = ({
                 {lvl}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Quick Pathway Guide for All Skill Levels */}
+        <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div 
+            onClick={() => setSelectedDifficulty('Beginner')}
+            className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+              selectedDifficulty === 'Beginner'
+                ? 'bg-emerald-950/40 border-emerald-500/60 shadow-md'
+                : 'bg-slate-900/40 border-slate-800 hover:border-emerald-500/30'
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="text-xs font-mono font-bold text-emerald-300">Level 1: New / Beginners</span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              Zero-prior experience required. Learn fundamentals, essential Linux commands, and foundational web security.
+            </p>
+          </div>
+
+          <div 
+            onClick={() => setSelectedDifficulty('Intermediate')}
+            className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+              selectedDifficulty === 'Intermediate'
+                ? 'bg-cyan-950/40 border-cyan-500/60 shadow-md'
+                : 'bg-slate-900/40 border-slate-800 hover:border-cyan-500/30'
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-cyan-400" />
+              <span className="text-xs font-mono font-bold text-cyan-300">Level 2: Intermediate</span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              For tech students & junior analysts. Master SOC alert triage, SIEM query hunting, and packet capture analysis.
+            </p>
+          </div>
+
+          <div 
+            onClick={() => setSelectedDifficulty('Advanced')}
+            className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+              selectedDifficulty === 'Advanced'
+                ? 'bg-purple-950/40 border-purple-500/60 shadow-md'
+                : 'bg-slate-900/40 border-slate-800 hover:border-purple-500/30'
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-purple-400" />
+              <span className="text-xs font-mono font-bold text-purple-300">Level 3: Advanced / Experts</span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              For seasoned practitioners. Deep memory forensics, red-team exploitation chains, and enterprise cloud hardening.
+            </p>
           </div>
         </div>
 
@@ -162,21 +220,64 @@ export const AcademySection: React.FC<AcademySectionProps> = ({
                 </div>
 
                 {/* Card Footer & Action */}
-                <div className="p-5 pt-0 border-t border-slate-800/60 mt-4 bg-slate-950/40 flex items-center justify-between">
+                <div className="p-5 pt-0 border-t border-slate-800/60 mt-4 bg-slate-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <div className="text-xs font-mono text-slate-400">Curriculum Access</div>
-                    <div className="text-sm font-bold text-white font-mono">
-                      PKR {course.pricePKR.toLocaleString()} <span className="text-xs text-slate-400 font-normal">(${course.priceUSD})</span>
+                    <div className="text-[10px] font-mono text-slate-400">
+                      {enrolled ? 'Enrollment Status' : 'Tuition & Lifetime License'}
                     </div>
+                    {enrolled ? (
+                      <div className="text-xs font-bold text-emerald-400 font-mono flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Enrolled & Unlocked
+                      </div>
+                    ) : (
+                      <div className="text-sm font-bold text-white font-mono">
+                        PKR {course.pricePKR.toLocaleString()} <span className="text-xs text-slate-400 font-normal">(${course.priceUSD})</span>
+                      </div>
+                    )}
                   </div>
 
-                  <button
-                    onClick={() => onSelectCourse(course)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-semibold text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-400 hover:from-cyan-300 hover:to-sky-300 transition-all cursor-pointer"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-slate-950" />
-                    <span>View Course</span>
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    {(() => {
+                      const allCourseLessons = course.chapters.flatMap(ch => ch.lessons);
+                      const isCompleted = allCourseLessons.length > 0 && allCourseLessons.every(l => completedLessonIds.includes(l.id));
+                      if (isCompleted && onGetCertificate) {
+                        return (
+                          <button
+                            onClick={() => onGetCertificate(course)}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 transition-all cursor-pointer shadow-md"
+                            title="Course Complete! Claim and view your certificate"
+                          >
+                            <Award className="w-3.5 h-3.5" />
+                            <span>Certificate 🎓</span>
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    {!enrolled && (
+                      <button
+                        onClick={() => onUpgrade(course.id)}
+                        className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-mono font-bold text-amber-950 bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 transition-all cursor-pointer shadow-sm"
+                        title="Enroll in full course via secure payment checkout"
+                      >
+                        <Lock className="w-3 h-3" />
+                        <span>Pay & Unlock</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => onSelectCourse(course)}
+                      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-mono font-semibold transition-all cursor-pointer ${
+                        enrolled
+                          ? 'text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-400 hover:from-cyan-300 hover:to-sky-300'
+                          : 'text-cyan-300 bg-cyan-950/60 border border-cyan-500/40 hover:bg-cyan-900/60'
+                      }`}
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>{enrolled ? 'Continue Course' : 'Free Preview'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );

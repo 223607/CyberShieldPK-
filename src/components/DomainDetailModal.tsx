@@ -8,39 +8,61 @@ import {
   Terminal, 
   BookOpen, 
   ExternalLink,
-  ShieldAlert
+  ShieldAlert,
+  FileText,
+  Clock,
+  Sparkles
 } from 'lucide-react';
-import { DomainInfo, Course, Lab } from '../types';
+import { DomainInfo, Course, Lab, Article } from '../types';
 import { COURSES } from '../data/courses';
 import { LABS } from '../data/labs';
+import { ARTICLES } from '../data/articles';
 
 interface DomainDetailModalProps {
   domain: DomainInfo | null;
   onClose: () => void;
   onSelectCourse: (course: Course) => void;
   onSelectLab: (lab: Lab) => void;
+  onSelectArticle: (article: Article) => void;
 }
 
 export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({
   domain,
   onClose,
   onSelectCourse,
-  onSelectLab
+  onSelectLab,
+  onSelectArticle
 }) => {
   if (!domain) return null;
 
-  // Find related courses and labs
-  const relatedCourses = COURSES.filter(c => 
+  // Find related courses - ensure every domain displays its curriculum
+  let relatedCourses = COURSES.filter(c => 
     c.category.toLowerCase().includes(domain.title.toLowerCase()) ||
     domain.title.toLowerCase().includes(c.category.toLowerCase()) ||
-    c.skills.some(s => domain.skillsCovered.includes(s))
+    c.skills.some(s => domain.skillsCovered.some(d => d.toLowerCase().includes(s.toLowerCase())))
   );
+
+  // If strict match is low, offer flagship foundational curriculums so it never shows empty
+  if (relatedCourses.length === 0) {
+    relatedCourses = COURSES.slice(0, 2);
+  }
 
   const relatedLabs = LABS.filter(l => 
     l.category.toLowerCase().includes(domain.title.toLowerCase()) ||
     domain.title.toLowerCase().includes(l.category.toLowerCase()) ||
-    l.skills.some(s => domain.skillsCovered.includes(s))
+    l.skills.some(s => domain.skillsCovered.some(d => d.toLowerCase().includes(s.toLowerCase())))
   );
+
+  // Find related technical articles for this domain
+  let relatedArticles = ARTICLES.filter(a =>
+    a.category.toLowerCase().includes(domain.title.toLowerCase()) ||
+    domain.title.toLowerCase().includes(a.category.toLowerCase()) ||
+    a.tags.some(t => domain.skillsCovered.some(s => s.toLowerCase().includes(t.toLowerCase())))
+  );
+
+  if (relatedArticles.length === 0) {
+    relatedArticles = ARTICLES.slice(0, 2);
+  }
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
@@ -100,33 +122,79 @@ export const DomainDetailModal: React.FC<DomainDetailModalProps> = ({
           </div>
 
           {/* Related Courses in this Track */}
-          {relatedCourses.length > 0 && (
-            <div className="space-y-3">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
               <span className="text-xs font-mono font-semibold text-white uppercase tracking-wider block">
-                Recommended Academy Courses ({relatedCourses.length})
+                Track Curriculum & Academy Courses ({relatedCourses.length})
               </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {relatedCourses.map((c) => (
-                  <div key={c.id} className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col justify-between space-y-2">
-                    <div>
-                      <h4 className="text-xs font-bold text-white line-clamp-1">{c.title}</h4>
-                      <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{c.description}</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        onClose();
-                        onSelectCourse(c);
-                      }}
-                      className="self-start text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
-                    >
-                      <span>Open Course Curriculum</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+              <span className="text-[11px] font-mono text-cyan-400">Verified Syllabi</span>
             </div>
-          )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {relatedCourses.map((c) => (
+                <div key={c.id} className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-cyan-500/40 flex flex-col justify-between space-y-3 transition-all">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
+                        {c.difficulty}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400">{c.duration}</span>
+                    </div>
+                    <h4 className="text-sm font-bold text-white line-clamp-1">{c.title}</h4>
+                    <p className="text-xs text-slate-300 line-clamp-2 mt-1">{c.description}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      onSelectCourse(c);
+                    }}
+                    className="self-start text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 pt-1 border-t border-slate-800 w-full"
+                  >
+                    <span>Open Full Curriculum</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Related Technical Articles in this Domain */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-semibold text-white uppercase tracking-wider block flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Domain Research Articles & Walkthroughs ({relatedArticles.length})</span>
+              </span>
+              <span className="text-[11px] font-mono text-slate-400">Peer-Reviewed Field Notes</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {relatedArticles.map((art) => (
+                <div key={art.id} className="p-4 rounded-xl bg-[#070f1e] border border-slate-800 hover:border-cyan-500/50 flex flex-col justify-between space-y-3 transition-all group">
+                  <div>
+                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1.5">
+                      <span className="text-cyan-400">{art.category}</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {art.readingTime}</span>
+                    </div>
+                    <h4 className="text-xs font-bold text-white group-hover:text-cyan-300 line-clamp-2 transition-colors">
+                      {art.title}
+                    </h4>
+                    <p className="text-[11px] text-slate-300 line-clamp-2 mt-1 leading-relaxed">
+                      {art.summary}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      onSelectArticle(art);
+                    }}
+                    className="self-start text-xs font-mono text-cyan-400 group-hover:text-cyan-300 flex items-center gap-1.5 pt-1 border-t border-slate-800 w-full cursor-pointer"
+                  >
+                    <span>Read Full Article</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Related Hands-on Labs */}
           {relatedLabs.length > 0 && (

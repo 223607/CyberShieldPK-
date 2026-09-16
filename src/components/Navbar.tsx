@@ -67,6 +67,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const navItems = [
     { label: 'Home', id: 'hero' },
     { label: 'Academy', id: 'academy' },
+    { label: 'Threat Desk & Roadmaps', id: 'threat-feed' },
     { label: 'Labs', id: 'labs' },
     { label: 'Tools', id: 'tools' },
     { label: 'Articles', id: 'articles' },
@@ -178,6 +179,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40 rounded transition-colors"
           >
             Academy
+          </button>
+          <button
+            onClick={() => handleNavClick('threat-feed')}
+            className="px-2.5 py-1.5 text-xs font-medium text-red-300 hover:text-red-200 hover:bg-red-950/40 rounded transition-colors flex items-center gap-1 font-mono"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+            <span>Threat Desk</span>
           </button>
           <button
             onClick={() => handleNavClick('labs')}

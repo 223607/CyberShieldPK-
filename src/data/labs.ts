@@ -23,7 +23,30 @@ export const LABS: Lab[] = [
 [+] Parameter 'username' is vulnerable to Error-based SQLi (MySQL >= 5.7)
 [+] Successfully injected: admin' OR '1'='1' -- 
 [+] Admin Dashboard unlocked! Session Cookie: CS_SESS_936_AUTH_VALID
-[+] FLAG: CS{SQL1_BYP4SS_AUTH_SUCCESS_2026}`
+[+] FLAG: CS{SQL1_BYP4SS_AUTH_SUCCESS_2026}`,
+    externalConnections: [
+      {
+        platform: 'TryHackMe',
+        title: 'SQL Injection Room',
+        url: 'https://tryhackme.com/room/sqlinjectionlm',
+        roomType: 'Free Room',
+        badge: 'THM Practice'
+      },
+      {
+        platform: 'PortSwigger Academy',
+        title: 'SQL injection vulnerability in WHERE clause allowing retrieval of hidden data',
+        url: 'https://portswigger.net/web-security/sql-injection/lab-retrieve-hidden-data',
+        roomType: 'Academy Topic',
+        badge: 'PortSwigger Lab'
+      },
+      {
+        platform: 'Hack The Box',
+        title: 'Starting Point: Sequel (SQLi & MySQL)',
+        url: 'https://app.hackthebox.com/starting-point',
+        roomType: 'CTF Box',
+        badge: 'HTB Tier 1'
+      }
+    ]
   },
   {
     id: 'lab-wazuh-siem',
@@ -48,7 +71,30 @@ export const LABS: Lab[] = [
 Rule: 5710 (level 10) -> 'Multiple failed SSH logins from single IP.'
 Src IP: 198.51.100.44
 Dst User: devops_lead
-Status: ALERT_RESOLVED_CONTAINED`
+Status: ALERT_RESOLVED_CONTAINED`,
+    externalConnections: [
+      {
+        platform: 'TryHackMe',
+        title: 'Wazuh SIEM Room & Log Analysis',
+        url: 'https://tryhackme.com/room/wazuhct',
+        roomType: 'Guided Lab',
+        badge: 'THM Wazuh'
+      },
+      {
+        platform: 'Blue Team Labs',
+        title: 'BTLO: Linux Authentication Triage Challenge',
+        url: 'https://blueteamlabs.online/',
+        roomType: 'Free Room',
+        badge: 'BTLO Challenge'
+      },
+      {
+        platform: 'Hack The Box',
+        title: 'HTB Sherlocks: SOC Investigation & Auth Logs',
+        url: 'https://app.hackthebox.com/sherlocks',
+        roomType: 'Guided Lab',
+        badge: 'Blue Team Track'
+      }
+    ]
   },
   {
     id: 'lab-idor-privilege',
@@ -76,7 +122,23 @@ Content-Type: application/json
 
 HTTP/1.1 200 OK
 {"success": true, "user": {"id": 1001, "role": "SuperAdmin"}}
-FLAG: CS{ID0R_PR1V1L3G3_3SC4L4T1ON}`
+FLAG: CS{ID0R_PR1V1L3G3_3SC4L4T1ON}`,
+    externalConnections: [
+      {
+        platform: 'PortSwigger Academy',
+        title: 'Insecure direct object references (IDOR) Lab',
+        url: 'https://portswigger.net/web-security/access-control/lab-insecure-direct-object-references',
+        roomType: 'Academy Topic',
+        badge: 'PortSwigger Lab'
+      },
+      {
+        platform: 'TryHackMe',
+        title: 'IDOR Room (OWASP Top 10 API)',
+        url: 'https://tryhackme.com/room/idor',
+        roomType: 'Free Room',
+        badge: 'THM Practice'
+      }
+    ]
   },
   {
     id: 'lab-wireshark-pcap',
@@ -100,7 +162,30 @@ Internet Protocol Version 4, Src: 192.168.10.15, Dst: 45.33.32.156
 Transmission Control Protocol, Src Port: 49182, Dst Port: 443
 TLSv1.2 Record Layer: Handshake Protocol: Client Hello
 SNI Server Name: c2-command.external-telemetry.org
-Beacon Interval Detected: 45.2s (Jitter 15%)`
+Beacon Interval Detected: 45.2s (Jitter 15%)`,
+    externalConnections: [
+      {
+        platform: 'TryHackMe',
+        title: 'Wireshark: 101 & Packet Analysis Fundamentals',
+        url: 'https://tryhackme.com/room/wireshark101',
+        roomType: 'Free Room',
+        badge: 'THM Wireshark'
+      },
+      {
+        platform: 'Blue Team Labs',
+        title: 'BTLO: Network Traffic Analysis (PCAP Investigation)',
+        url: 'https://blueteamlabs.online/',
+        roomType: 'Guided Lab',
+        badge: 'BTLO Network'
+      },
+      {
+        platform: 'OverTheWire',
+        title: 'OverTheWire Bandit (Linux & Network Fundamentals)',
+        url: 'https://overthewire.org/wargames/bandit/',
+        roomType: 'Free Room',
+        badge: 'Bandit Wargame'
+      }
+    ]
   },
   {
     id: 'lab-memory-dump',
@@ -124,7 +209,23 @@ PID: 4892 (svchost.exe) PPID: 1844 (powershell.exe) <-- ANOMALY!
 VAD: 0x24a0000 - 0x24b2000 Protection: PAGE_EXECUTE_READWRITE
 Malfind Hexdump:
 0x024a0000:  fc e8 82 00 00 00 60 89  e5 31 c0 64 8b 50 30 8b  ......\`..1.d.P0.
-FLAG: CS{M3M0RY_1NJ3CT10N_CARV3D_SUCC3SS}`
+FLAG: CS{M3M0RY_1NJ3CT10N_CARV3D_SUCC3SS}`,
+    externalConnections: [
+      {
+        platform: 'TryHackMe',
+        title: 'Volatility 3 Room: Memory Analysis and Triage',
+        url: 'https://tryhackme.com/room/volatility',
+        roomType: 'Guided Lab',
+        badge: 'THM Volatility'
+      },
+      {
+        platform: 'Hack The Box',
+        title: 'HTB Sherlocks: Memory Dump DFIR Investigation',
+        url: 'https://app.hackthebox.com/sherlocks',
+        roomType: 'CTF Box',
+        badge: 'HTB DFIR'
+      }
+    ]
   },
   {
     id: 'lab-cloud-iam',
@@ -143,6 +244,22 @@ FLAG: CS{M3M0RY_1NJ3CT10N_CARV3D_SUCC3SS}`
       { id: 't3', instruction: 'Deploy new default policy version granting administrator privileges.' }
     ],
     terminalPrompt: 'cloud-auditor@aws-sandbox:~$',
-    sampleLogOrOutput: `[!] Lab status: Scheduled for production release in Phase 2.`
+    sampleLogOrOutput: `[!] Lab status: Scheduled for production release in Phase 2.`,
+    externalConnections: [
+      {
+        platform: 'TryHackMe',
+        title: 'AWS Cloud Security & IAM Privilege Escalation',
+        url: 'https://tryhackme.com/room/awscloudsecurity',
+        roomType: 'Guided Lab',
+        badge: 'THM AWS'
+      },
+      {
+        platform: 'Hack The Box',
+        title: 'HTB Cloud: AWS IAM Enumeration & Attack Vectors',
+        url: 'https://app.hackthebox.com/',
+        roomType: 'CTF Box',
+        badge: 'HTB Cloud'
+      }
+    ]
   }
 ];

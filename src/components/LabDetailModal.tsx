@@ -7,10 +7,14 @@ import {
   Play, 
   Lightbulb, 
   AlertTriangle, 
-  Send,
-  Sparkles,
-  Layers,
-  HelpCircle
+  Send, 
+  Sparkles, 
+  Layers, 
+  HelpCircle,
+  ExternalLink,
+  Globe,
+  Compass,
+  ShieldCheck
 } from 'lucide-react';
 import { Lab } from '../types';
 
@@ -189,6 +193,52 @@ export const LabDetailModal: React.FC<LabDetailModalProps> = ({
                 })}
               </div>
             </div>
+
+            {/* Connected External Cyber Ranges (TryHackMe, PortSwigger, HTB) */}
+            {lab.externalConnections && lab.externalConnections.length > 0 && (
+              <div className="p-4 rounded-xl bg-gradient-to-b from-slate-900/90 to-slate-950 border border-cyan-500/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-cyan-400" />
+                    <span className="text-xs font-mono font-semibold text-white">
+                      Connected Live Cyber Ranges
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30">
+                    Real Practice
+                  </span>
+                </div>
+                
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Practice here in the CyberShield sandbox or launch the corresponding room on external training platforms:
+                </p>
+
+                <div className="space-y-2">
+                  {lab.externalConnections.map((ext, idx) => (
+                    <a
+                      key={idx}
+                      href={ext.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-cyan-500/40 hover:bg-slate-900/90 transition-all group"
+                    >
+                      <div className="flex items-center gap-2.5 truncate mr-2">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-cyan-300 border border-cyan-500/30 flex-shrink-0">
+                          {ext.platform}
+                        </span>
+                        <span className="text-xs text-slate-200 group-hover:text-white truncate font-medium">
+                          {ext.title}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] font-mono text-cyan-400 group-hover:translate-x-0.5 transition-transform flex-shrink-0">
+                        <span>Launch</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Complete Lab Action */}
             <div className="pt-2">

@@ -71,6 +71,14 @@ export interface Course {
   chapters: CourseChapter[];
 }
 
+export interface ExternalLabConnection {
+  platform: 'TryHackMe' | 'Hack The Box' | 'PortSwigger Academy' | 'Blue Team Labs' | 'OverTheWire' | 'VulnHub';
+  title: string;
+  url: string;
+  badge?: string;
+  roomType?: 'Free Room' | 'Guided Lab' | 'CTF Box' | 'Academy Topic';
+}
+
 export interface Lab {
   id: string;
   title: string;
@@ -85,6 +93,7 @@ export interface Lab {
   tasks: { id: string; instruction: string; hint?: string }[];
   terminalPrompt?: string;
   sampleLogOrOutput?: string;
+  externalConnections?: ExternalLabConnection[];
 }
 
 export interface SecurityTool {

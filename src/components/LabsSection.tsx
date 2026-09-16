@@ -7,9 +7,11 @@ import {
   Play, 
   Lock, 
   AlertCircle, 
-  Cpu,
-  Layers,
-  ArrowRight
+  Cpu, 
+  Layers, 
+  ArrowRight,
+  ExternalLink,
+  Globe
 } from 'lucide-react';
 import { LABS } from '../data/labs';
 import { Lab } from '../types';
@@ -128,6 +130,35 @@ export const LabsSection: React.FC<LabsSectionProps> = ({
                       </span>
                     ))}
                   </div>
+
+                  {/* Connected External Practice Platforms (TryHackMe, PortSwigger, HTB) */}
+                  {lab.externalConnections && lab.externalConnections.length > 0 && (
+                    <div className="mt-3.5 pt-3 border-t border-slate-800/60">
+                      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1.5">
+                        <span className="flex items-center gap-1 text-cyan-400 font-semibold">
+                          <Globe className="w-3 h-3" />
+                          <span>Connected Ranges:</span>
+                        </span>
+                        <span className="text-slate-400">{lab.externalConnections.length} Labs Available</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {lab.externalConnections.map((ext, idx) => (
+                          <a
+                            key={idx}
+                            href={ext.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-700/80 transition-colors"
+                            title={`Practice on ${ext.platform}: ${ext.title}`}
+                          >
+                            <span>{ext.platform}</span>
+                            <ExternalLink className="w-2.5 h-2.5 text-slate-400" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}

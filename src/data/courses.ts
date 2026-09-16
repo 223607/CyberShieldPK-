@@ -724,5 +724,256 @@ nmap --script "vuln and safe" -p 80,443,445 192.168.1.50
         ]
       }
     ]
+  },
+  {
+    id: 'course-malware-analysis',
+    slug: 'practical-malware-analysis-ghidra-reverse-engineering',
+    title: 'Practical Malware Analysis & Binary Reverse Engineering',
+    category: 'Malware Analysis',
+    difficulty: 'Advanced',
+    duration: '24 Hours',
+    modulesCount: 5,
+    lessonsCount: 18,
+    pricePKR: 14500,
+    priceUSD: 52,
+    isPremium: true,
+    badge: 'Specialized',
+    description: 'Dissect PE headers, analyze suspicious Windows APIs, configure isolated sandboxes, and decompile binaries using Ghidra.',
+    detailedOverview: 'Designed for reverse engineers and advanced DFIR analysts, this program breaks down static and dynamic malware analysis techniques. Learn to unpack obfuscated payloads, decode C2 traffic, and author high-fidelity YARA rules.',
+    instructor: {
+      name: 'Muhammad Zaib Zafar',
+      role: 'Security Analyst & Penetration Tester',
+      bio: 'Reverse engineering specialist focusing on Windows PE binaries, living-off-the-land evasion techniques, and behavioral sandboxing.',
+      certifications: ['CEH v12', 'Malware Reverse Engineer', 'Wazuh SOC Specialist']
+    },
+    skills: [
+      'Ghidra Static Decompilation & Disassembly',
+      'PE File Structure & Section Header Auditing',
+      'Dynamic Analysis in Isolated Cuckoo Sandboxes',
+      'API Hooking & Process Injection Detection',
+      'YARA Rule Creation & Signature Matching',
+      'Anti-Analysis & Anti-Debugging Evasion Bypasses'
+    ],
+    prerequisites: ['Basic x86/x64 assembly knowledge and C/C++ fundamentals'],
+    labsIncluded: ['lab-malware-sandbox', 'lab-yara-rules'],
+    chapters: [
+      {
+        id: 'mal-ch-1',
+        chapterNumber: 1,
+        title: 'Static Analysis & Safe Workstation Architecture',
+        description: 'Host-only networks, snapshot management, and PE file structure inspection.',
+        lessons: [
+          {
+            id: 'mal-les-1-1',
+            title: 'Malware Analysis Lab Setup & Safe Sandboxing',
+            duration: '22 min',
+            isFree: true,
+            summary: 'Hardening host-only virtual machines (FLARE VM, REMnux), disabling network adapters, and setting baseline snapshots.',
+            videoUrl: 'https://www.youtube-nocookie.com/embed/v9_yU9QZkY8',
+            videoType: 'youtube',
+            lectureNotes: `# Safe Malware Workstation Setup
+
+### Safety Rules:
+1. **Isolated Virtual Network**: Always select "Host-Only" or "Internal Network" in hypervisors.
+2. **Read-Only Shared Folders**: Never enable bidirectional copy-paste or automatic shared folders during execution.
+3. **Pre-Execution Snapshots**: Take a clean snapshot prior to detonating samples.
+
+### Standard Toolset:
+- **REMnux**: Linux toolkit for reverse engineering and simulating fake network services (INetSim).
+- **FLARE VM**: Windows environment armed with Ghidra, x64dbg, PEStudio, and Process Hacker.`
+          },
+          {
+            id: 'mal-les-1-2',
+            title: 'PE Header Inspection & Suspicious Imports',
+            duration: '29 min',
+            isFree: true,
+            summary: 'Using PEStudio and pestr to analyze .text, .rdata, .data sections, high entropy (indicating packing), and suspicious APIs.',
+            videoUrl: 'https://www.youtube-nocookie.com/embed/2_lswM1S264',
+            videoType: 'youtube',
+            lectureNotes: `# PE Header Analysis
+
+### Key Indicators of Compromise in Headers:
+- **Entropy > 7.0**: Indicates packed, compressed, or encrypted payload sections.
+- **Suspicious API Imports**:
+  - \`VirtualAllocEx\`, \`WriteProcessMemory\`, \`CreateRemoteThread\` (Classic Process Injection)
+  - \`IsDebuggerPresent\`, \`CheckRemoteDebuggerPresent\` (Anti-Debugging checks)
+  - \`InternetOpenUrlA\`, \`URLDownloadToFileA\` (C2 Stagers)`
+          },
+          {
+            id: 'mal-les-1-3',
+            title: 'Static Decompilation in Ghidra & Function Renaming',
+            duration: '35 min',
+            isFree: false,
+            summary: 'Loading stripped binaries into Ghidra, identifying main() entry points, tracking cross-references (XREFs), and resolving obfuscated strings.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'course-cryptography',
+    slug: 'applied-cryptography-pki-post-quantum-defense',
+    title: 'Applied Cryptography, PKI & Enterprise Key Management',
+    category: 'Cryptography',
+    difficulty: 'Intermediate',
+    duration: '20 Hours',
+    modulesCount: 4,
+    lessonsCount: 16,
+    pricePKR: 11500,
+    priceUSD: 40,
+    isPremium: true,
+    badge: 'Mathematical Core',
+    description: 'Master AES-GCM, RSA, ECC, TLS 1.3 handshakes, public key infrastructure (PKI), zero-knowledge concepts, and quantum resistance.',
+    detailedOverview: 'Without robust cryptography, modern communications crumble. This course walks security engineers through the mathematics, implementation pitfalls, padding oracle attacks, and enterprise certificate management.',
+    instructor: {
+      name: 'Muhammad Zaib Zafar',
+      role: 'Security Analyst & Penetration Tester',
+      bio: 'Applied cryptography reviewer researching secure key derivation, TLS cipher suites, and modern algorithm transitions.',
+      certifications: ['CEH v12', 'Applied Cryptography Specialist']
+    },
+    skills: [
+      'AES-GCM Authenticated Encryption Implementation',
+      'Elliptic Curve Cryptography (ECDSA & Ed25519)',
+      'TLS 1.3 Handshake Dissection & Ephemeral Diffie-Hellman',
+      'Password Hashing (Argon2id vs Bcrypt vs PBKDF2)',
+      'X.509 Certificate Chain & PKI Revocation (OCSP/CRL)',
+      'Padding Oracle & Nonce Reuse Cryptanalysis'
+    ],
+    prerequisites: ['Basic modular arithmetic and general programming logic'],
+    labsIncluded: ['lab-crypto-break', 'lab-tls-handshake'],
+    chapters: [
+      {
+        id: 'cry-ch-1',
+        chapterNumber: 1,
+        title: 'Symmetric Encryption & Block Cipher Modes',
+        description: 'Stream vs block ciphers, ECB flaws, CBC padding oracles, and modern AES-GCM.',
+        lessons: [
+          {
+            id: 'cry-les-1-1',
+            title: 'The Fundamentals of Symmetric Ciphers & Why ECB is Fatal',
+            duration: '21 min',
+            isFree: true,
+            summary: 'Understanding block size, substitution-permutation networks, and why Electronic Codebook (ECB) leaks visual and structural data.',
+            videoUrl: 'https://www.youtube-nocookie.com/embed/O_eBfF03yps',
+            videoType: 'youtube',
+            lectureNotes: `# Symmetric Ciphers & Modes of Operation
+
+### Block Cipher Modes:
+1. **ECB (Electronic Codebook)**: Never use! Identical plaintext blocks produce identical ciphertext blocks.
+2. **CBC (Cipher Block Chaining)**: Requires unpredictable IV; vulnerable to padding oracle attacks if MAC isn't applied first.
+3. **GCM (Galois/Counter Mode)**: Gold standard Authenticated Encryption with Associated Data (AEAD). Provides confidentiality + cryptographic authenticity verification.`
+          },
+          {
+            id: 'cry-les-1-2',
+            title: 'TLS 1.3 Handshake & Perfect Forward Secrecy (PFS)',
+            duration: '28 min',
+            isFree: true,
+            summary: 'Why TLS 1.3 removed vulnerable legacy ciphers (RC4, DES, CBC, static RSA key exchange) in favor of ECDHE.',
+            videoUrl: 'https://www.youtube-nocookie.com/embed/OU-A2EmVrKQ',
+            videoType: 'youtube',
+            lectureNotes: `# TLS 1.3 Security Enhancements
+
+### Key Changes:
+- 1-RTT Handshake (Zero-RTT resume option)
+- Removed static RSA key exchange (enforces Perfect Forward Secrecy via ephemeral Diffie-Hellman)
+- Encrypted handshake certificates to prevent passive SNI wiretapping`
+          },
+          {
+            id: 'cry-les-1-3',
+            title: 'Modern Password Hashing: Argon2id & Memory-Hard Defense',
+            duration: '30 min',
+            isFree: false,
+            summary: 'Benchmarking MD5/SHA256 (unsuitable for passwords) against Argon2id and scrypt to defeat GPU/ASIC brute forcing.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'course-osint-threat-intel',
+    slug: 'operational-cyber-threat-intelligence-advanced-osint',
+    title: 'Operational Cyber Threat Intelligence (CTI) & Advanced OSINT',
+    category: 'OSINT & Threat Intelligence',
+    difficulty: 'Beginner',
+    duration: '22 Hours',
+    modulesCount: 5,
+    lessonsCount: 17,
+    pricePKR: 10500,
+    priceUSD: 38,
+    isPremium: true,
+    badge: 'Strategic Defense',
+    description: 'Harvest actionable intelligence, track APT campaigns, correlate threat infrastructure using Shodan & Maltego, and audit dark web leaks.',
+    detailedOverview: 'Learn how modern threat hunters map adversary infrastructure before attacks occur. This hands-on course covers passive reconnaissance, STIX/TAXII threat feed ingestion, and dark web monitoring without burning operational security.',
+    instructor: {
+      name: 'Muhammad Zaib Zafar',
+      role: 'Security Analyst & Penetration Tester',
+      bio: 'Threat intelligence researcher specializing in adversary TTP tracking, dark web breach triangulation, and open-source intelligence.',
+      certifications: ['CEH v12', 'OSINT Specialist', 'Wazuh SOC Analyst']
+    },
+    skills: [
+      'Advanced Google Dorking & Search Operator Syntax',
+      'Shodan & Censys Attack Surface Enumeration',
+      'Adversary Infrastructure Graphing with Maltego',
+      'STIX/TAXII Standards & Threat Intelligence Platforms (MISP)',
+      'Dark Web Threat Actor & Ransomware Portal Tracking',
+      'Passive DNS & SSL Certificate Pivot Investigations'
+    ],
+    prerequisites: ['Curious mindset and basic internet protocol knowledge'],
+    labsIncluded: ['lab-osint-recon', 'lab-misp-intel'],
+    chapters: [
+      {
+        id: 'osi-ch-1',
+        chapterNumber: 1,
+        title: 'Intelligence Fundamentals & OPSEC Standards',
+        description: 'Intelligence cycle, sock puppets, and secure investigation environments.',
+        lessons: [
+          {
+            id: 'osi-les-1-1',
+            title: 'The Intelligence Cycle & Ethical Investigation Boundaries',
+            duration: '20 min',
+            isFree: true,
+            summary: 'Planning & Direction, Collection, Processing, Analysis, and Dissemination phases.',
+            videoUrl: 'https://www.youtube-nocookie.com/embed/Y0rLwz3mFvY',
+            videoType: 'youtube',
+            lectureNotes: `# The Cyber Threat Intelligence Cycle
+
+### 5 Phases:
+1. **Direction**: Defining Intelligence Requirements (PIRs)
+2. **Collection**: Gathering OSINT, telemetry, darknet chatter, passive DNS
+3. **Processing**: Normalizing data into STIX format
+4. **Analysis**: Correlating indicators with MITRE ATT&CK techniques
+5. **Dissemination**: Delivering executive threat briefs and blocking IoCs on edge firewalls`
+          },
+          {
+            id: 'osi-les-1-2',
+            title: 'Shodan & Censys Query Mastery for Attack Surface Discovery',
+            duration: '31 min',
+            isFree: true,
+            summary: 'Finding exposed databases, industrial control systems, RDP portals, and unauthenticated webcams.',
+            videoUrl: 'https://www.youtube-nocookie.com/embed/4t4kBkMsDbY',
+            videoType: 'youtube',
+            lectureNotes: `# Power Shodan Dorks for Analysts
+
+\`\`\`bash
+# Exposed Elasticsearch instances without auth
+product:"Elasticsearch" port:9200 "status" : 200
+
+# Open RDP servers
+port:3389 has_screenshot:true
+
+# SSL Certificate Common Name pivoting
+ssl.cert.subject.cn:"example.com"
+\`\`\``
+          },
+          {
+            id: 'osi-les-1-3',
+            title: 'Graphing Threat Actors with Maltego & AlienVault OTX',
+            duration: '33 min',
+            isFree: false,
+            summary: 'Transforming domain names into IP addresses, MX servers, and correlated malware hashes.'
+          }
+        ]
+      }
+    ]
   }
 ];
