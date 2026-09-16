@@ -1,0 +1,6 @@
+{
+  "name": "CyberShieldPK",
+  "description": "CyberShieldPK — Learn, Build, Defend. Cybersecurity Academy, hands-on labs, security tools, articles, real-world projects, and professional security services.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

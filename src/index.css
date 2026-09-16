@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --cyber-bg: #060c16;
+    --cyber-card: #0c1527;
+    --cyber-border: rgba(30, 58, 95, 0.45);
+    --cyber-cyan: #00f0ff;
+    --cyber-green: #00ff9d;
+    --cyber-purple: #8b5cf6;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #060c16;
+    color: #e2e8f0;
+    overflow-x: hidden;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom subtle cyber-grid background */
+.cyber-grid-bg {
+  background-image: 
+    linear-gradient(to right, rgba(14, 165, 233, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(14, 165, 233, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.cyber-dots-bg {
+  background-image: radial-gradient(rgba(0, 240, 255, 0.12) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Glassmorphism card utility */
+.cyber-glass {
+  background: rgba(10, 18, 33, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+}
+
+.cyber-glass-glow:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 0 20px -5px rgba(6, 182, 212, 0.18);
+}
+
+/* Custom scrollbars for terminals and lists */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #060c16;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0ea5e9;
+}
