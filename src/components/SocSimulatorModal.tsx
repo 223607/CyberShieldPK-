@@ -1,399 +1,482 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Radio, 
   ShieldAlert, 
   Server, 
-  Cpu, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Terminal, 
-  Search, 
-  Filter, 
-  Eye, 
-  Play, 
-  RefreshCw,
-  ExternalLink,
-  Layers,
-  Settings,
+  Flame, 
+  Network, 
+  Bug, 
+  FileBarChart2, 
+  Settings, 
+  Zap, 
+  Activity, 
+  Maximize2, 
+  Minimize2, 
+  RefreshCw, 
+  Menu, 
+  ChevronRight,
   ShieldCheck,
-  Zap
+  CheckCircle2,
+  Terminal,
+  Bell,
+  Laptop
 } from 'lucide-react';
-import { SOC_ALERTS, SOC_ENDPOINTS, MITRE_MAPPINGS } from '../data/socData';
-import { SocAlert } from '../types';
+import { SocDashboardOverview } from './soc/SocDashboardOverview';
+import { SocThreatIntel } from './soc/SocThreatIntel';
+import { SocAlertsPage } from './soc/SocAlertsPage';
+import { SocIncidentsPage } from './soc/SocIncidentsPage';
+import { SocNetworkPage } from './soc/SocNetworkPage';
+import { SocVulnerabilitiesPage } from './soc/SocVulnerabilitiesPage';
+import { SocReportsPage } from './soc/SocReportsPage';
+import { SocSettingsPage } from './soc/SocSettingsPage';
+import { SocWazuhConnector } from './soc/SocWazuhConnector';
+import { SocEndpointInspector } from './soc/SocEndpointInspector';
+import { initialAlerts, Alert, AlertStatus } from '../data/socDashboardData';
 
 interface SocSimulatorModalProps {
   onClose: () => void;
 }
 
-export const SocSimulatorModal: React.FC<SocSimulatorModalProps> = ({
-  onClose
-}) => {
-  const [activeTab, setActiveTab] = useState<'alerts' | 'endpoints' | 'mitre' | 'config'>('alerts');
-  const [selectedAlert, setSelectedAlert] = useState<SocAlert | null>(SOC_ALERTS[0]);
-  const [alertsList, setAlertsList] = useState<SocAlert[]>(SOC_ALERTS);
-  const [simulatedLiveAlertCount, setSimulatedLiveAlertCount] = useState(SOC_ALERTS.length);
-  const [isSimulating, setIsSimulating] = useState(true);
+export type SocTab = 
+  | 'overview' 
+  | 'wazuh-connector'
+  | 'endpoint-inspector'
+  | 'threat-intel' 
+  | 'alerts' 
+  | 'incidents' 
+  | 'network' 
+  | 'vulnerabilities' 
+  | 'reports' 
+  | 'settings';
 
-  const handleUpdateAlertStatus = (alertId: string, newStatus: SocAlert['status']) => {
-    setAlertsList(prev => prev.map(a => a.id === alertId ? { ...a, status: newStatus } : a));
-    if (selectedAlert && selectedAlert.id === alertId) {
-      setSelectedAlert({ ...selectedAlert, status: newStatus });
+export const SocSimulatorModal: React.FC<SocSimulatorModalProps> = ({ onClose }) => {
+  const [activeTab, setActiveTab] = useState<SocTab>('overview');
+  const [alerts, setAlerts] = useState<Alert[]>(initialAlerts);
+  const [selectedAlertForInspection, setSelectedAlertForInspection] = useState<Alert | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState('');
+  const [recentNotification, setRecentNotification] = useState<string | null>(null);
+
+  // Live real-time clock
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString('en-US', { hour12: false }) + ' PKT');
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Update status of an individual alert
+  const handleUpdateAlertStatus = (alertId: string, newStatus: AlertStatus) => {
+    setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: newStatus } : a));
+    if (selectedAlertForInspection && selectedAlertForInspection.id === alertId) {
+      setSelectedAlertForInspection({ ...selectedAlertForInspection, status: newStatus });
     }
   };
 
-  const handleGenerateSimulatedAlert = () => {
-    const newId = `ALT-${9043 + alertsList.length}`;
-    const syntheticAlert: SocAlert = {
-      id: newId,
-      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      severity: 'HIGH',
-      ruleName: 'Outbound Reverse TCP Connection to High-Risk ASN Flagged',
-      sourceIp: '10.0.4.15',
-      destinationIp: '45.33.32.156',
-      endpoint: 'DEV-LAPTOP-09',
-      mitreTechnique: 'T1571 - Non-Standard Port Communication',
-      status: 'NEW',
-      logPayload: `{"timestamp":"${new Date().toISOString()}","agent":{"id":"005","name":"DEV-LAPTOP-09","ip":"10.0.4.15"},"rule":{"id":"100192","level":11,"description":"TCP SYN beacon to unknown external IP over port 4444"},"data":{"proto":"tcp","dest_port":4444,"process":"nc.exe"}}`
-    };
-    setAlertsList([syntheticAlert, ...alertsList]);
-    setSelectedAlert(syntheticAlert);
+  // Bulk update
+  const handleBulkUpdateAlerts = (alertIds: string[], newStatus: AlertStatus) => {
+    setAlerts(prev => prev.map(a => alertIds.includes(a.id) ? { ...a, status: newStatus } : a));
+    setRecentNotification(`Updated ${alertIds.length} alerts to status: ${newStatus}`);
+    setTimeout(() => setRecentNotification(null), 3000);
   };
 
+  // Trigger synthetic telemetry event (intrusion simulation)
+  const handleTriggerTelemetryEvent = () => {
+    const syntheticId = `ALT-${1093 + alerts.length}`;
+    const attacks = [
+      {
+        type: 'Outbound Reverse TCP Shell Spawned',
+        severity: 'critical' as const,
+        source: '10.0.4.15 (DEV-PC)',
+        destination: '45.33.32.156:4444',
+        protocol: 'TCP',
+        port: 4444,
+        country: 'RU',
+        desc: 'Netcat reverse shell established on port 4444 to external suspicious ASN.'
+      },
+      {
+        type: 'Kerberoasting TGS-REQ Request Spike',
+        severity: 'high' as const,
+        source: '10.0.4.88 (FIN-WKS)',
+        destination: '10.0.1.5 (DC-PROD)',
+        protocol: 'Kerberos',
+        port: 88,
+        country: 'INTERNAL',
+        desc: 'Service Principal Name RC4-HMAC ticket requests for multiple high-privilege service accounts.'
+      },
+      {
+        type: 'DNS Tunneling Query Pattern Detected',
+        severity: 'medium' as const,
+        source: '10.0.3.18 (CORP-SRV)',
+        destination: '8.8.8.8:53',
+        protocol: 'DNS',
+        port: 53,
+        country: 'US',
+        desc: 'Suspicious base64-encoded subdomains queried with high entropy.'
+      }
+    ];
+
+    const pick = attacks[Math.floor(Math.random() * attacks.length)];
+    const newAlert: Alert = {
+      id: syntheticId,
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      type: pick.type,
+      severity: pick.severity,
+      status: 'open',
+      source: pick.source,
+      destination: pick.destination,
+      protocol: pick.protocol,
+      port: pick.port,
+      country: pick.country,
+      description: pick.desc
+    };
+
+    setAlerts([newAlert, ...alerts]);
+    setRecentNotification(`🚨 INTRUSION DETECTED: ${newAlert.id} - ${newAlert.type}`);
+    setTimeout(() => setRecentNotification(null), 4000);
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+      setRecentNotification('All SIEM feeds synchronized with Wazuh & Suricata agents.');
+      setTimeout(() => setRecentNotification(null), 3000);
+    }, 800);
+  };
+
+  interface NavTabItem {
+    id: SocTab;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: number;
+  }
+
+  const navTabs: NavTabItem[] = [
+    { id: 'overview', label: 'Dashboard', icon: Activity },
+    { id: 'wazuh-connector', label: 'Wazuh Live Agent', icon: Terminal },
+    { id: 'endpoint-inspector', label: 'Endpoint Activities (IP)', icon: Laptop },
+    { id: 'threat-intel', label: 'Threat Intel', icon: ShieldAlert },
+    { id: 'alerts', label: 'Alerts & Events', icon: Bell, badge: alerts.filter(a => a.status === 'open').length },
+    { id: 'incidents', label: 'Incidents', icon: Flame, badge: 2 },
+    { id: 'network', label: 'Network Monitor', icon: Network },
+    { id: 'vulnerabilities', label: 'Vulnerabilities', icon: Bug, badge: 5 },
+    { id: 'reports', label: 'Reports', icon: FileBarChart2 },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-200">
-      <div className="bg-[#070e1a] border border-cyan-500/40 w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[94vh]">
-        {/* Top SOC Bar */}
-        <div className="px-5 py-3.5 bg-slate-950/95 border-b border-cyan-500/30 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-              <Radio className="w-4 h-4 animate-pulse" />
+    <div className={`fixed inset-0 z-50 overflow-y-auto bg-black/90 backdrop-blur-md flex items-center justify-center ${
+      isFullscreen ? 'p-0' : 'p-2 sm:p-4'
+    } animate-in fade-in duration-200`}>
+      <div className={`bg-[#060c16] border border-cyan-500/40 w-full rounded-2xl shadow-2xl overflow-hidden flex flex-col ${
+        isFullscreen ? 'h-full rounded-none' : 'max-w-7xl max-h-[96vh]'
+      }`}>
+        
+        {/* TOPBAR: SOC Operations Header */}
+        <header className="px-4 py-3 bg-slate-950 border-b border-cyan-500/30 flex items-center justify-between shrink-0 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Mobile menu trigger */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-1.5 rounded-lg bg-slate-900 text-slate-300 hover:text-white"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            <div className="w-9 h-9 rounded-xl bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0">
+              <Radio className="w-5 h-5 animate-pulse" />
             </div>
-            <div>
+
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-sm sm:text-base font-bold text-white font-mono tracking-tight">
-                  CyberShieldPK Security Operations Center
+                <h2 className="text-xs sm:text-sm font-extrabold text-white font-mono tracking-tight truncate">
+                  CyberShield<span className="text-cyan-400">PK</span> SOC Operations Center
                 </h2>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 animate-pulse">
-                  SIMULATOR MODE
+                <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40 animate-pulse">
+                  SYSTEM ACTIVE
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 font-mono">
-                Wazuh SIEM Open-Source Telemetry & Event Correlation Sandbox
+              <p className="text-[10px] text-slate-400 font-mono hidden md:block">
+                Open-Source Wazuh SIEM & Suricata Threat Hunting Console
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Right Action Controls */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Live Clock */}
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] font-mono text-cyan-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{currentTime}</span>
+            </div>
+
+            {/* Trigger Simulation */}
             <button
-              onClick={handleGenerateSimulatedAlert}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 transition-all cursor-pointer"
-              title="Simulate incoming adversary intrusion event"
+              type="button"
+              onClick={handleTriggerTelemetryEvent}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold text-slate-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(52,211,153,0.3)]"
+              title="Inject synthetic adversary attack into SIEM"
             >
               <Zap className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Trigger Telemetry Event</span>
+              <span className="hidden md:inline">Trigger Telemetry Event</span>
             </button>
 
+            {/* Refresh */}
             <button
+              type="button"
+              onClick={handleRefresh}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 border border-slate-800 cursor-pointer"
+              title="Refresh feeds"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`} />
+            </button>
+
+            {/* Fullscreen Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 border border-slate-800 hidden sm:block cursor-pointer"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+
+            {/* Close */}
+            <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-red-950/60 hover:border-red-500/40 border border-transparent transition-colors cursor-pointer"
+              title="Close SOC Console"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* Educational Safe-Mode Disclaimer Banner */}
-        <div className="bg-cyan-950/50 border-b border-cyan-500/20 px-4 py-2 flex items-center justify-between text-[11px] font-mono text-cyan-200">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-            <span>
-              Safe Simulator Environment: Demonstrates real Wazuh alerts, decoders, and MITRE tactics safely without connecting to unverified networks.
+        {/* NOTIFICATION FLASH BANNER */}
+        {recentNotification && (
+          <div className="px-4 py-2 bg-gradient-to-r from-cyan-950/90 via-slate-900/95 to-slate-950 border-b border-cyan-500/40 text-xs font-mono text-cyan-200 flex items-center justify-between animate-in slide-in-from-top duration-150">
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+              <span>{recentNotification}</span>
             </span>
+            <button
+              type="button"
+              onClick={() => setRecentNotification(null)}
+              className="text-slate-400 hover:text-white text-xs cursor-pointer"
+            >
+              ✕
+            </button>
           </div>
-          <span className="hidden md:inline text-slate-400">
-            Rule Engine: Wazuh v4.7.2
-          </span>
-        </div>
+        )}
 
-        {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-800/80 bg-slate-900/50 px-4 pt-2 gap-2">
-          <button
-            onClick={() => setActiveTab('alerts')}
-            className={`px-4 py-2 text-xs font-mono rounded-t-lg transition-colors flex items-center gap-2 ${
-              activeTab === 'alerts'
-                ? 'bg-slate-950 text-cyan-400 border-t border-x border-slate-800 font-semibold'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Live Alerts ({alertsList.length})</span>
-          </button>
+        {/* MAIN BODY: SIDEBAR + CONTENT AREA */}
+        <div className="flex flex-1 overflow-hidden relative">
+          
+          {/* SIDEBAR NAVIGATION */}
+          <aside className={`bg-slate-950/95 border-r border-slate-800 flex flex-col transition-all duration-200 shrink-0 z-20 ${
+            sidebarCollapsed ? 'w-16' : 'w-56'
+          } hidden lg:flex`}>
+            <div className="p-3 border-b border-slate-800/80 flex items-center justify-between text-[11px] font-mono text-slate-400">
+              {!sidebarCollapsed && <span className="uppercase tracking-wider">Navigation</span>}
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-1 rounded text-slate-500 hover:text-white hover:bg-slate-900 cursor-pointer ml-auto"
+                title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+              >
+                <ChevronRight className={`w-3.5 h-3.5 transition-transform ${sidebarCollapsed ? '' : 'rotate-180'}`} />
+              </button>
+            </div>
 
-          <button
-            onClick={() => setActiveTab('endpoints')}
-            className={`px-4 py-2 text-xs font-mono rounded-t-lg transition-colors flex items-center gap-2 ${
-              activeTab === 'endpoints'
-                ? 'bg-slate-950 text-emerald-400 border-t border-x border-slate-800 font-semibold'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Server className="w-3.5 h-3.5" />
-            <span>Monitored Agents ({SOC_ENDPOINTS.length})</span>
-          </button>
+            <nav className="p-2 space-y-1 overflow-y-auto flex-1 font-mono text-xs">
+              {navTabs.map((item) => {
+                const isActive = activeTab === item.id;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveTab(item.id as SocTab)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer text-left ${
+                      isActive 
+                        ? 'bg-cyan-950/80 text-cyan-300 font-bold border border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.15)]' 
+                        : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
+                    }`}
+                    title={sidebarCollapsed ? item.label : undefined}
+                  >
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
+                    {!sidebarCollapsed && (
+                      <div className="flex items-center justify-between flex-1 min-w-0">
+                        <span className="truncate">{item.label}</span>
+                        {item.badge !== undefined && item.badge > 0 && (
+                          <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                            item.id === 'incidents' ? 'bg-red-500 text-white' : 'bg-cyan-950 text-cyan-400 border border-cyan-500/30'
+                          }`}>
+                            {item.badge}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
 
-          <button
-            onClick={() => setActiveTab('mitre')}
-            className={`px-4 py-2 text-xs font-mono rounded-t-lg transition-colors flex items-center gap-2 ${
-              activeTab === 'mitre'
-                ? 'bg-slate-950 text-purple-400 border-t border-x border-slate-800 font-semibold'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>MITRE ATT&CK Matrix</span>
-          </button>
+            <div className="p-3 border-t border-slate-800/80 bg-slate-950">
+              {!sidebarCollapsed ? (
+                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-[10px] font-mono text-slate-400">
+                  <div className="flex items-center justify-between text-white font-bold mb-1">
+                    <span>Wazuh v4.8</span>
+                    <span className="text-emerald-400">Online</span>
+                  </div>
+                  <p className="text-slate-500 truncate">Agent Cluster: 6 Active</p>
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-center text-emerald-400 mx-auto" title="Wazuh Core Active">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+              )}
+            </div>
+          </aside>
 
-          <button
-            onClick={() => setActiveTab('config')}
-            className={`px-4 py-2 text-xs font-mono rounded-t-lg transition-colors flex items-center gap-2 ${
-              activeTab === 'config'
-                ? 'bg-slate-950 text-amber-400 border-t border-x border-slate-800 font-semibold'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Settings className="w-3.5 h-3.5" />
-            <span>Wazuh Node Configuration</span>
-          </button>
-        </div>
-
-        {/* Tab Content */}
-        <div className="flex-1 overflow-hidden">
-          {/* Alerts Tab */}
-          {activeTab === 'alerts' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 h-full overflow-hidden">
-              {/* Alert List Left */}
-              <div className="lg:col-span-6 border-b lg:border-b-0 lg:border-r border-slate-800 overflow-y-auto divide-y divide-slate-800/60 p-3 space-y-2">
-                {alertsList.map((alert) => {
-                  const isSelected = selectedAlert?.id === alert.id;
-                  const sevColor = 
-                    alert.severity === 'CRITICAL' ? 'bg-rose-950/80 text-rose-400 border-rose-500/40' :
-                    alert.severity === 'HIGH' ? 'bg-amber-950/80 text-amber-400 border-amber-500/40' :
-                    alert.severity === 'MEDIUM' ? 'bg-yellow-950/80 text-yellow-400 border-yellow-500/40' :
-                    'bg-cyan-950/80 text-cyan-400 border-cyan-500/40';
-
-                  return (
-                    <div
-                      key={alert.id}
-                      onClick={() => setSelectedAlert(alert)}
-                      className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                        isSelected 
-                          ? 'bg-slate-900 border-cyan-500/50 shadow-md' 
-                          : 'bg-slate-950/60 border-slate-800/80 hover:bg-slate-900/60'
-                      }`}
+          {/* MOBILE SLIDE-OUT DRAWER */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden fixed inset-0 z-30 bg-black/70 backdrop-blur-sm flex">
+              <div className="w-64 bg-slate-950 border-r border-slate-800 p-4 flex flex-col justify-between space-y-4 font-mono text-xs">
+                <div>
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <span className="text-white font-bold uppercase text-xs">SOC Navigation</span>
+                    <button 
+                      type="button"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-slate-400 hover:text-white"
                     >
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className={`text-[10px] font-mono px-2 py-0.2 rounded border ${sevColor}`}>
-                          {alert.severity}
-                        </span>
-                        <span className="text-[10px] font-mono text-slate-500">
-                          {alert.timestamp}
-                        </span>
-                      </div>
-
-                      <h4 className="text-xs font-bold text-white leading-snug line-clamp-1 mt-1">
-                        {alert.ruleName}
-                      </h4>
-
-                      <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mt-2">
-                        <span>Agent: <strong className="text-cyan-300">{alert.endpoint}</strong></span>
-                        <span className="text-slate-300">{alert.status}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Selected Alert Inspection Right */}
-              <div className="lg:col-span-6 p-6 overflow-y-auto space-y-5 bg-slate-950/80">
-                {selectedAlert ? (
-                  <>
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                      <div>
-                        <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest">
-                          Alert ID: {selectedAlert.id}
-                        </span>
-                        <h3 className="text-base font-bold text-white mt-0.5">
-                          {selectedAlert.ruleName}
-                        </h3>
-                      </div>
-
-                      {/* Status Selector */}
-                      <div className="flex items-center gap-1.5">
-                        {(['NEW', 'INVESTIGATING', 'CONTAINED', 'RESOLVED'] as const).map(st => (
-                          <button
-                            key={st}
-                            onClick={() => handleUpdateAlertStatus(selectedAlert.id, st)}
-                            className={`px-2 py-1 text-[10px] font-mono rounded transition-colors ${
-                              selectedAlert.status === st
-                                ? 'bg-cyan-500 text-slate-950 font-bold'
-                                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                            }`}
-                          >
-                            {st}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Threat Details Grid */}
-                    <div className="grid grid-cols-2 gap-3 text-xs font-mono bg-slate-900/60 p-4 rounded-xl border border-slate-800">
-                      <div>
-                        <span className="text-slate-500 block">Source IP:</span>
-                        <span className="text-slate-200">{selectedAlert.sourceIp}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block">Target / Destination:</span>
-                        <span className="text-slate-200">{selectedAlert.destinationIp}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block">Monitored Endpoint:</span>
-                        <span className="text-cyan-300">{selectedAlert.endpoint}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block">MITRE Technique:</span>
-                        <span className="text-amber-400">{selectedAlert.mitreTechnique}</span>
-                      </div>
-                    </div>
-
-                    {/* Raw Wazuh Syslog Payload */}
-                    <div className="space-y-2">
-                      <span className="text-xs font-mono font-semibold text-slate-400 uppercase tracking-wider block">
-                        Raw SIEM JSON Payload:
-                      </span>
-                      <pre className="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-cyan-300 overflow-x-auto whitespace-pre-wrap select-text leading-relaxed">
-                        <code>{selectedAlert.logPayload}</code>
-                      </pre>
-                    </div>
-
-                    {/* Recommended Analyst Playbook Action */}
-                    <div className="p-4 rounded-xl bg-cyan-950/30 border border-cyan-500/30 space-y-2 text-xs">
-                      <span className="font-mono text-cyan-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-cyan-400" />
-                        Analyst Containment Playbook
-                      </span>
-                      <p className="text-slate-300 leading-relaxed">
-                        1. Isolate endpoint <code>{selectedAlert.endpoint}</code> at firewall or host level. <br />
-                        2. Query Sysmon process ancestry for parent execution command. <br />
-                        3. Extract volatile RAM sample if credential dumping activity is confirmed. <br />
-                        4. Revoke compromised credentials and rotate Kerberos krbtgt ticket if Active Directory DC is impacted.
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-20 text-slate-500 font-mono text-xs">
-                    Select an alert from the queue to view full forensic telemetry.
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                )}
-              </div>
-            </div>
-          )}
 
-          {/* Monitored Endpoints Tab */}
-          {activeTab === 'endpoints' && (
-            <div className="p-6 overflow-y-auto space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white font-mono">
-                  Active Wazuh Endpoint Agents ({SOC_ENDPOINTS.length})
-                </h3>
-                <span className="text-xs font-mono text-emerald-400">
-                  Cluster Status: Normal (Zero drops)
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {SOC_ENDPOINTS.map((ep) => (
-                  <div key={ep.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 font-mono text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-white">{ep.hostname}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/30">
-                        {ep.wazuhStatus}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1 text-slate-400 text-[11px]">
-                      <div>IP: <span className="text-slate-200">{ep.ip}</span></div>
-                      <div>OS: <span className="text-cyan-300">{ep.os}</span></div>
-                      <div>Agent ID: <span className="text-slate-200">{ep.agentId}</span></div>
-                      <div>Last Ping: <span className="text-slate-400">{ep.lastKeepAlive}</span></div>
-                    </div>
+                  <div className="space-y-1 mt-3">
+                    {navTabs.map((item) => {
+                      const isActive = activeTab === item.id;
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveTab(item.id as SocTab);
+                            setMobileMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left ${
+                            isActive ? 'bg-cyan-950 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <Icon className="w-4 h-4" />
+                            <span>{item.label}</span>
+                          </span>
+                          {item.badge !== undefined && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 text-cyan-400">
+                              {item.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
-                ))}
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-400">
+                  <p className="text-white font-bold">CyberShieldPK SOC</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Real-time Defense Simulator</p>
+                </div>
               </div>
+              <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
             </div>
           )}
 
-          {/* MITRE ATT&CK Tab */}
-          {activeTab === 'mitre' && (
-            <div className="p-6 overflow-y-auto space-y-4">
-              <h3 className="text-sm font-bold text-white font-mono">
-                MITRE ATT&CK Detection Matrix Coverage
-              </h3>
-              <p className="text-xs text-slate-400">
-                Wazuh correlation rules currently active in the simulator mapped to MITRE enterprise tactics.
-              </p>
+          {/* WORKSPACE CONTENT AREA */}
+          <main className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-6 bg-[#060c16]">
+            {activeTab === 'overview' && (
+              <SocDashboardOverview
+                alerts={alerts}
+                onSelectAlert={(a) => {
+                  setActiveTab('alerts');
+                }}
+                onNavigateTab={(tab) => setActiveTab(tab as SocTab)}
+              />
+            )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {MITRE_MAPPINGS.map((m, idx) => (
-                  <div key={idx} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between text-xs font-mono">
-                      <span className="text-cyan-400 font-bold">{m.technique}</span>
-                      <span className="text-slate-400">{m.count} Triggered</span>
-                    </div>
-                    <div className="text-xs font-semibold text-white">{m.name}</div>
-                    <div className="flex flex-wrap gap-1">
-                      {m.tactics.map((t, tIdx) => (
-                        <span key={tIdx} className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-500/30">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            {activeTab === 'wazuh-connector' && (
+              <SocWazuhConnector />
+            )}
 
-          {/* Wazuh Configuration UI */}
-          {activeTab === 'config' && (
-            <div className="p-6 overflow-y-auto space-y-6 max-w-3xl">
-              <div>
-                <h3 className="text-base font-bold text-white font-mono">
-                  Wazuh Cluster Connection Guidance
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  How to securely deploy and connect production or lab Wazuh agents to your central SIEM indexer.
-                </p>
-              </div>
+            {activeTab === 'endpoint-inspector' && (
+              <SocEndpointInspector />
+            )}
 
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3 font-mono text-xs">
-                <span className="text-cyan-300 font-bold block">1. Linux Agent Enrollment Command:</span>
-                <pre className="p-3 bg-slate-900 rounded-lg text-emerald-400 overflow-x-auto">
-                  <code>WAZUH_MANAGER="soc.cybershield.org" apt-get install wazuh-agent</code>
-                </pre>
+            {activeTab === 'threat-intel' && (
+              <SocThreatIntel />
+            )}
 
-                <span className="text-cyan-300 font-bold block pt-2">2. Windows PowerShell Enrollment:</span>
-                <pre className="p-3 bg-slate-900 rounded-lg text-emerald-400 overflow-x-auto">
-                  <code>Invoke-WebRequest -Uri https://packages.wazuh.com/4.x/windows/wazuh-agent-4.7.2.msi -OutFile wazuh-agent.msi; msiexec.exe /i wazuh-agent.msi /q WAZUH_MANAGER='soc.cybershield.org'</code>
-                </pre>
-              </div>
+            {activeTab === 'alerts' && (
+              <SocAlertsPage
+                alerts={alerts}
+                onUpdateStatus={handleUpdateAlertStatus}
+                onBulkUpdate={handleBulkUpdateAlerts}
+              />
+            )}
 
-              <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-500/30 text-xs text-amber-200 leading-relaxed">
-                <strong>Defensive Ethics Notice:</strong> Only enroll systems that you own or have explicit, documented legal authorization to monitor. Deploying unauthorized telemetry or monitoring agents onto third-party systems is illegal.
-              </div>
-            </div>
-          )}
+            {activeTab === 'incidents' && (
+              <SocIncidentsPage />
+            )}
+
+            {activeTab === 'network' && (
+              <SocNetworkPage />
+            )}
+
+            {activeTab === 'vulnerabilities' && (
+              <SocVulnerabilitiesPage />
+            )}
+
+            {activeTab === 'reports' && (
+              <SocReportsPage />
+            )}
+
+            {activeTab === 'settings' && (
+              <SocSettingsPage />
+            )}
+          </main>
         </div>
+
+        {/* FOOTER STATUS BAR */}
+        <footer className="px-4 py-2 bg-slate-950 border-t border-slate-800 text-[11px] font-mono text-slate-500 flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 text-slate-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              Perimeter Defense: <strong>ENGAGED</strong>
+            </span>
+            <span className="hidden sm:inline text-slate-700">|</span>
+            <span className="hidden sm:inline">Active Telemetry Sensors: <strong>Suricata • Zeek • Sysmon</strong></span>
+          </div>
+
+          <div className="flex items-center gap-3 text-slate-400">
+            <span>Terminal: <strong className="text-cyan-400">SOC-OPS-CON-01</strong></span>
+            <span className="text-slate-700">|</span>
+            <span>Founder: <strong className="text-white">Muhammad Zaib Zafar</strong></span>
+          </div>
+        </footer>
+
       </div>
     </div>
   );

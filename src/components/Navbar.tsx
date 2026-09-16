@@ -233,14 +233,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right Actions: Search, SOC, Auth */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* SOC Simulator Button */}
+          {/* SOC Dashboard Button */}
           <button
             onClick={onOpenSocSimulator}
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-mono text-emerald-400 bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/30 rounded-lg transition-all"
-            title="Open Interactive SOC Simulator"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono font-bold text-emerald-400 bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 rounded-lg transition-all shadow-[0_0_12px_rgba(52,211,153,0.15)] cursor-pointer"
+            title="Open Live SOC Operations Dashboard"
           >
             <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
-            <span className="hidden md:inline">SOC SIMULATOR</span>
+            <span className="hidden md:inline">LIVE SOC DASHBOARD</span>
+            <span className="md:hidden">SOC OPS</span>
           </button>
 
           {/* Search Trigger */}
@@ -293,11 +294,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="lg:hidden bg-[#0a1222] border-b border-cyan-500/30 px-4 pt-3 pb-6 space-y-3 mt-2 max-h-[80vh] overflow-y-auto">
           <div className="grid grid-cols-2 gap-2 pt-2 border-b border-slate-800 pb-3">
             <button
-              onClick={onOpenSocSimulator}
-              className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-500/40 rounded-lg"
+              onClick={() => {
+                onOpenSocSimulator();
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-mono font-bold text-emerald-400 bg-emerald-950/50 border border-emerald-500/40 rounded-lg cursor-pointer"
             >
               <Radio className="w-3.5 h-3.5 animate-pulse" />
-              <span>SOC SIM</span>
+              <span>SOC DASHBOARD</span>
             </button>
             <button
               onClick={() => {

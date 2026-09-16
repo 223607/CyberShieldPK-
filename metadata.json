@@ -1,6 +1,6 @@
 {
   "name": "CyberShieldPK",
-  "description": "CyberShieldPK — Learn, Build, Defend. Cybersecurity Academy, hands-on labs, security tools, articles, real-world projects, and professional security services.",
+  "description": "CyberShieldPK — Cybersecurity Academy, hands-on labs, Live SOC Operations Center with Wazuh SIEM agent integration, Windows PowerShell log streaming, and endpoint activity forensic inspector.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
