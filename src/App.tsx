@@ -33,6 +33,10 @@ import { UpgradeModal } from './components/UpgradeModal';
 import { CertificateModal } from './components/CertificateModal';
 import { FallingStarsCelebration } from './components/FallingStarsCelebration';
 import { DailyThreatFeedSection } from './components/DailyThreatFeedSection';
+import { ComingSoonAndRoadmapsSection } from './components/ComingSoonAndRoadmapsSection';
+import { InternshipSection } from './components/InternshipSection';
+import { InternshipModal } from './components/InternshipModal';
+import { SocSimulatorSection } from './components/SocSimulatorSection';
 
 import { DOMAINS } from './data/domains';
 import { Course, Lab, Article, Project, SecurityService, ResourceItem, DomainInfo } from './types';
@@ -53,23 +57,32 @@ export default function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [dashboardModalOpen, setDashboardModalOpen] = useState(false);
   const [upgradeModalCourseId, setUpgradeModalCourseId] = useState<string | null>(null);
+  const [internshipModalOpen, setInternshipModalOpen] = useState(false);
+  const [selectedInternshipTrack, setSelectedInternshipTrack] = useState<string | undefined>(undefined);
+  const [activeView, setActiveView] = useState<string>('all');
   
   // Certificate & Celebration States
   const [certificateCourse, setCertificateCourse] = useState<Course | null>(null);
   const [showFallingStars, setShowFallingStars] = useState<boolean>(false);
 
-  // User & Learning State with local persistence
+  // User & Learning State with local persistence and verified session check
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role?: string } | null>(() => {
     try {
+      const isVerified = localStorage.getItem('cybershield_verified_session') === 'true';
       const saved = localStorage.getItem('cybershield_user');
-      return saved ? JSON.parse(saved) : { name: 'Muhammad Zaib Zafar', email: 'zaibzafar936@gmail.com', role: 'Security Specialist' };
+      if (isVerified && saved) {
+        return JSON.parse(saved);
+      }
+      return null;
     } catch {
-      return { name: 'Muhammad Zaib Zafar', email: 'zaibzafar936@gmail.com', role: 'Security Specialist' };
+      return null;
     }
   });
 
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<string[]>(() => {
     try {
+      const isVerified = localStorage.getItem('cybershield_verified_session') === 'true';
+      if (!isVerified) return [];
       const saved = localStorage.getItem('cybershield_enrolled_courses');
       return saved ? JSON.parse(saved) : [];
     } catch {
@@ -79,10 +92,12 @@ export default function App() {
 
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>(() => {
     try {
+      const isVerified = localStorage.getItem('cybershield_verified_session') === 'true';
+      if (!isVerified) return [];
       const saved = localStorage.getItem('cybershield_completed_lessons');
-      return saved ? JSON.parse(saved) : ['les-1-1'];
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return ['les-1-1'];
+      return [];
     }
   });
 
@@ -132,17 +147,86 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Smooth scroll handler
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      const navOffset = 80;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - navOffset;
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+  // Direct page / view navigation handler: switches instantly to relevant page with zero scroll-up lag!
+  const handleNavigate = (id: string) => {
+    // 1. If clicking a domain ID (e.g. ethical-hacking, cloud-security, etc.), open directly!
+    const matchingDomain = DOMAINS.find(d => d.id === id);
+    if (matchingDomain) {
+      setActiveDomain(matchingDomain);
+      return;
+    }
+
+    // 2. Direct page switching
+    if (id === 'hero' || id === 'home') {
+      setActiveView('all');
+    } else {
+      setActiveView(id);
+    }
+
+    // 3. Instant top alignment without jumpy scroll animations
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  };
+
+  const VIEW_METADATA: Record<string, { title: string; subtitle: string; tag: string }> = {
+    'academy': {
+      title: 'CyberShieldPK Academy',
+      subtitle: 'Structured courses, practical modules, and verified industry-standard certificates.',
+      tag: 'ACADEMY COURSES'
+    },
+    'threat-feed': {
+      title: 'Live Threat Intelligence Desk & Breaking Cyber News',
+      subtitle: 'Real-time CVE zero-day alerts, active exploitation telemetry, ransomware intelligence, and direct links to authoritative knowledge sources.',
+      tag: 'THREAT INTELLIGENCE'
+    },
+    'soc-simulator': {
+      title: 'Wazuh SIEM & Enterprise SOC Simulator',
+      subtitle: 'Real-time defensive operations, active agent telemetry, Sysmon alerts, and MITRE ATT&CK mitigation.',
+      tag: 'TIER-1 / TIER-2 SOC'
+    },
+    'internship': {
+      title: 'CyberShieldPK Fellowship & Internship 2026',
+      subtitle: 'Immersive remote mentorship, real-world incident simulations, and recommendation letter from founder Muhammad Zaib Zafar.',
+      tag: 'CAREER OPPORTUNITY'
+    },
+    'labs': {
+      title: 'Hands-on Cybersecurity Labs',
+      subtitle: 'Interactive virtual environments for Web Exploitation, Cryptography, Reverse Engineering, and Network Defense.',
+      tag: 'VIRTUAL LABS'
+    },
+    'tools': {
+      title: 'Security Tools Directory',
+      subtitle: 'Curated repository of elite defensive, offensive, digital forensics, and OSINT toolkits.',
+      tag: 'TOOL DIRECTORY'
+    },
+    'articles': {
+      title: 'Research Articles & Incident Writeups',
+      subtitle: 'Deep technical analysis of vulnerabilities, exploitation methodologies, and blue team defense.',
+      tag: 'RESEARCH & WRITEUPS'
+    },
+    'projects': {
+      title: 'Production Security Projects',
+      subtitle: 'Real-world blueprints, open-source security software, and enterprise architectures.',
+      tag: 'PRODUCTION PROJECTS'
+    },
+    'services': {
+      title: 'Professional Security Services',
+      subtitle: 'Penetration testing, source code audits, compliance assessments, and adversary emulation consulting.',
+      tag: 'SECURITY SERVICES'
+    },
+    'resources': {
+      title: 'Security Resources & Cheat Sheets',
+      subtitle: 'Comprehensive reference sheets, payload checklists, and study blueprints.',
+      tag: 'RESOURCES'
+    },
+    'portfolio': {
+      title: 'Founder Portfolio — Muhammad Zaib Zafar',
+      subtitle: 'Lead Security Researcher, Penetration Tester, and Founder of CyberShieldPK.',
+      tag: 'FOUNDER BIOGRAPHY'
+    },
+    'domains': {
+      title: 'Cybersecurity Domains & Specializations',
+      subtitle: 'Nine structured learning domains spanning offensive, defensive, and cloud security.',
+      tag: 'DOMAIN TRACKS'
     }
   };
 
@@ -216,25 +300,34 @@ export default function App() {
     setEnrolledCourseIds(prev => {
       const next = prev.includes(courseId) ? prev : [...prev, courseId];
       localStorage.setItem('cybershield_enrolled_courses', JSON.stringify(next));
+      if (currentUser?.email) {
+        localStorage.setItem(`cybershield_enrolled_${currentUser.email}`, JSON.stringify(next));
+      }
       return next;
     });
   };
 
   const handleStartCourse = (course: Course) => {
-    const isVerified = localStorage.getItem('cybershield_verified_session') === 'true';
-    if (!isVerified) {
-      setPendingCourse(course);
-      setAuthModalOpen(true);
-    } else {
-      setActiveCourse(course);
-    }
+    setActiveCourse(course);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('cybershield_user');
     localStorage.removeItem('cybershield_verified_session');
+    localStorage.removeItem('cybershield_enrolled_courses');
+    localStorage.removeItem('cybershield_completed_lessons');
+    localStorage.removeItem('cybershield_completed_labs');
     setCurrentUser(null);
+    setEnrolledCourseIds([]);
+    setCompletedLessonIds([]);
+    setCompletedLabIds([]);
     setDashboardModalOpen(false);
+    setActiveCourse(null);
+  };
+
+  const isUserEnrolled = (courseId: string) => {
+    if (!currentUser) return false;
+    return enrolledCourseIds.includes(courseId);
   };
 
   const handleDomainSelect = (domainId: string) => {
@@ -245,89 +338,245 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050b14] text-slate-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="min-h-screen bg-[#050b14] text-slate-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200 w-full max-w-full overflow-x-hidden">
       {/* 1. Global Navigation Bar */}
       <Navbar
         onOpenSearch={() => setSearchModalOpen(true)}
         onOpenAuth={() => setAuthModalOpen(true)}
         onOpenDashboard={() => setDashboardModalOpen(true)}
-        onNavigateSection={scrollToSection}
+        onNavigateSection={handleNavigate}
         onSelectDomain={handleDomainSelect}
         onOpenSocSimulator={() => setSocModalOpen(true)}
         currentUser={currentUser}
+        activeView={activeView}
       />
 
-      <main>
-        {/* 2. Hero Section - With Robust Permanent Heading Visibility */}
-        <Hero
-          onStartLearning={() => scrollToSection('academy')}
-          onExploreLabs={() => scrollToSection('labs')}
-          onOpenSoc={() => setSocModalOpen(true)}
-        />
+      {/* When a specific menu view is selected, directly show its focused page with breadcrumb header */}
+      {activeView !== 'all' && (
+        <div className="pt-24 pb-6 bg-[#070e1c] border-b border-cyan-500/20 px-4 sm:px-6 lg:px-8 w-full">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-mono text-cyan-400">
+                <button 
+                  type="button"
+                  onClick={() => handleNavigate('all')}
+                  className="hover:underline text-slate-400 hover:text-white cursor-pointer"
+                >
+                  Home
+                </button>
+                <span>/</span>
+                <span className="text-cyan-300 font-bold">{VIEW_METADATA[activeView]?.tag || 'VIEW'}</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
+                {VIEW_METADATA[activeView]?.title || 'CyberShieldPK'}
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl">
+                {VIEW_METADATA[activeView]?.subtitle}
+              </p>
+            </div>
 
-        {/* 3. Cybersecurity Domains */}
-        <DomainsSection
-          onSelectDomain={handleDomainSelect}
-          onExploreLabsForDomain={(category) => {
-            scrollToSection('labs');
-          }}
-        />
+            <button
+              type="button"
+              onClick={() => handleNavigate('all')}
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-slate-700 hover:border-cyan-500/50 text-xs font-mono transition-all flex items-center gap-2 cursor-pointer shadow-md"
+            >
+              <span>← View Full Platform Overview</span>
+            </button>
+          </div>
+        </div>
+      )}
 
-        {/* 4. Academy (Courses & Modules) */}
-        <AcademySection
-          onSelectCourse={(course) => handleStartCourse(course)}
-          onUpgrade={(courseId) => setUpgradeModalCourseId(courseId || null)}
-          isEnrolled={(courseId) => enrolledCourseIds.includes(courseId)}
-          completedLessonIds={completedLessonIds}
-          onGetCertificate={handleOpenCertificate}
-        />
+      <main className="w-full max-w-full overflow-x-hidden">
+        {/* CONDITIONAL RENDERING: EITHER DIRECT VIEW OR FULL PLATFORM */}
 
-        {/* Live Daily Threat Feed & Upcoming Curriculums */}
-        <DailyThreatFeedSection />
+        {/* --- 1. DIRECT VIEW: ACADEMY --- */}
+        {activeView === 'academy' && (
+          <AcademySection
+            onSelectCourse={(course) => handleStartCourse(course)}
+            onUpgrade={(courseId) => setUpgradeModalCourseId(courseId || null)}
+            isEnrolled={isUserEnrolled}
+            completedLessonIds={currentUser ? completedLessonIds : []}
+            onGetCertificate={handleOpenCertificate}
+            currentUser={currentUser}
+            onOpenAuth={() => setAuthModalOpen(true)}
+          />
+        )}
 
-        {/* 5. Hands-on Cyber Labs */}
-        <LabsSection
-          onSelectLab={(lab) => setActiveLab(lab)}
-        />
+        {/* --- 2. DIRECT VIEW: THREAT DESK --- */}
+        {activeView === 'threat-feed' && (
+          <DailyThreatFeedSection />
+        )}
 
-        {/* 6. Security Tools Directory */}
-        <ToolsSection />
+        {/* --- 3. DIRECT VIEW: SOC SIMULATOR --- */}
+        {activeView === 'soc-simulator' && (
+          <SocSimulatorSection
+            onOpenSocModal={() => setSocModalOpen(true)}
+          />
+        )}
 
-        {/* 7. Research Articles */}
-        <ArticlesSection
-          onSelectArticle={(article) => setActiveArticle(article)}
-        />
+        {/* --- 4. DIRECT VIEW: INTERNSHIP --- */}
+        {activeView === 'internship' && (
+          <InternshipSection
+            onApply={(track) => {
+              setSelectedInternshipTrack(track);
+              setInternshipModalOpen(true);
+            }}
+          />
+        )}
 
-        {/* 8. Production Projects */}
-        <ProjectsSection
-          onSelectProject={(project) => setActiveProject(project)}
-        />
+        {/* --- 5. DIRECT VIEW: LABS --- */}
+        {activeView === 'labs' && (
+          <LabsSection
+            onSelectLab={(lab) => setActiveLab(lab)}
+          />
+        )}
 
-        {/* 9. Professional Services & Consulting */}
-        <ServicesSection
-          onRequestQuote={(service) => setActiveService(service)}
-        />
+        {/* --- 6. DIRECT VIEW: TOOLS --- */}
+        {activeView === 'tools' && (
+          <ToolsSection />
+        )}
 
-        {/* 10. Resources & Cheat Sheets */}
-        <ResourcesSection
-          onSelectResource={(resource) => setActiveResource(resource)}
-        />
+        {/* --- 7. DIRECT VIEW: ARTICLES --- */}
+        {activeView === 'articles' && (
+          <ArticlesSection
+            onSelectArticle={(article) => setActiveArticle(article)}
+          />
+        )}
 
-        {/* 11. Portfolio & Founder Biography (Muhammad Zaib Zafar) */}
-        <PortfolioSection />
+        {/* --- 8. DIRECT VIEW: PROJECTS --- */}
+        {activeView === 'projects' && (
+          <ProjectsSection
+            onSelectProject={(project) => setActiveProject(project)}
+          />
+        )}
 
-        {/* 12. Final High-Impact CTA */}
-        <FinalCtaSection
-          onStartLearning={() => scrollToSection('academy')}
-          onExploreLabs={() => scrollToSection('labs')}
-          onOpenSoc={() => setSocModalOpen(true)}
-        />
+        {/* --- 9. DIRECT VIEW: SERVICES --- */}
+        {activeView === 'services' && (
+          <ServicesSection
+            onRequestQuote={(service) => setActiveService(service)}
+          />
+        )}
+
+        {/* --- 10. DIRECT VIEW: RESOURCES --- */}
+        {activeView === 'resources' && (
+          <ResourcesSection
+            onSelectResource={(resource) => setActiveResource(resource)}
+          />
+        )}
+
+        {/* --- 11. DIRECT VIEW: PORTFOLIO --- */}
+        {activeView === 'portfolio' && (
+          <PortfolioSection />
+        )}
+
+        {/* --- 12. DIRECT VIEW: DOMAINS --- */}
+        {activeView === 'domains' && (
+          <DomainsSection
+            onSelectDomain={handleDomainSelect}
+            onExploreLabsForDomain={() => handleNavigate('labs')}
+          />
+        )}
+
+        {/* --- FULL COMPREHENSIVE PLATFORM VIEW (activeView === 'all') --- */}
+        {activeView === 'all' && (
+          <>
+            {/* 1. Hero Section */}
+            <Hero
+              onStartLearning={() => handleNavigate('academy')}
+              onExploreLabs={() => handleNavigate('labs')}
+              onOpenSoc={() => setSocModalOpen(true)}
+            />
+
+            {/* 2. Cybersecurity Domains */}
+            <DomainsSection
+              onSelectDomain={handleDomainSelect}
+              onExploreLabsForDomain={() => handleNavigate('labs')}
+            />
+
+            {/* 3. Academy (Courses & Modules) */}
+            <AcademySection
+              onSelectCourse={(course) => handleStartCourse(course)}
+              onUpgrade={(courseId) => setUpgradeModalCourseId(courseId || null)}
+              isEnrolled={isUserEnrolled}
+              completedLessonIds={currentUser ? completedLessonIds : []}
+              onGetCertificate={handleOpenCertificate}
+              currentUser={currentUser}
+              onOpenAuth={() => setAuthModalOpen(true)}
+            />
+
+            {/* 3.5. Coming Soon Courses & Skill Roadmaps (Displayed on Home menu option) */}
+            <ComingSoonAndRoadmapsSection
+              onNavigateToAcademy={() => handleNavigate('academy')}
+              onNavigateToLabs={() => handleNavigate('labs')}
+            />
+
+            {/* 4. Hands-on Cyber Labs */}
+            <LabsSection
+              onSelectLab={(lab) => setActiveLab(lab)}
+            />
+
+            {/* 5. Security Tools Directory */}
+            <ToolsSection />
+
+            {/* 6. Research Articles */}
+            <ArticlesSection
+              onSelectArticle={(article) => setActiveArticle(article)}
+            />
+
+            {/* 7. Production Projects */}
+            <ProjectsSection
+              onSelectProject={(project) => setActiveProject(project)}
+            />
+
+            {/* 8. Professional Services & Consulting */}
+            <ServicesSection
+              onRequestQuote={(service) => setActiveService(service)}
+            />
+
+            {/* 9. Resources & Cheat Sheets */}
+            <ResourcesSection
+              onSelectResource={(resource) => setActiveResource(resource)}
+            />
+
+            {/* 10. Portfolio & Founder Biography (Muhammad Zaib Zafar) */}
+            <PortfolioSection />
+
+            {/* --- SECTIONS PLACED IN THE LAST (as user requested: "all these like soc simulator internship and threat desk willl be show in the last set it complete") --- */}
+            
+            {/* 11. Live Threat Desk & Skill Roadmaps */}
+            <DailyThreatFeedSection />
+
+            {/* 12. Enterprise SOC & Wazuh SIEM Simulator */}
+            <SocSimulatorSection
+              onOpenSocModal={() => setSocModalOpen(true)}
+            />
+
+            {/* 13. Fellowship & Internship Program 2026 (With Available / Off Controller) */}
+            <InternshipSection
+              onApply={(track) => {
+                setSelectedInternshipTrack(track);
+                setInternshipModalOpen(true);
+              }}
+            />
+
+            {/* 14. Final High-Impact CTA */}
+            <FinalCtaSection
+              onStartLearning={() => handleNavigate('academy')}
+              onExploreLabs={() => handleNavigate('labs')}
+              onOpenSoc={() => setSocModalOpen(true)}
+            />
+          </>
+        )}
       </main>
 
-      {/* 13. Global Footer */}
+      {/* Global Footer */}
       <Footer
-        onNavigateSection={scrollToSection}
+        onNavigateSection={handleNavigate}
         onOpenSoc={() => setSocModalOpen(true)}
+        onOpenInternship={() => {
+          setSelectedInternshipTrack(undefined);
+          setInternshipModalOpen(true);
+        }}
       />
 
       {/* Interactive Modals */}
@@ -337,8 +586,8 @@ export default function App() {
           course={activeCourse}
           onClose={() => setActiveCourse(null)}
           onUpgrade={(cId) => setUpgradeModalCourseId(cId)}
-          isEnrolled={enrolledCourseIds.includes(activeCourse.id)}
-          completedLessonIds={completedLessonIds}
+          isEnrolled={isUserEnrolled(activeCourse.id)}
+          completedLessonIds={currentUser ? completedLessonIds : []}
           onToggleLessonCompletion={handleToggleLessonCompletion}
           userNotes={userNotes}
           onSaveNote={handleSaveNote}
@@ -432,6 +681,27 @@ export default function App() {
           }}
           onLoginSuccess={(user) => {
             setCurrentUser(user);
+            try {
+              const userSavedCourses = localStorage.getItem(`cybershield_enrolled_${user.email}`);
+              if (userSavedCourses) {
+                const parsed = JSON.parse(userSavedCourses);
+                setEnrolledCourseIds(parsed);
+                localStorage.setItem('cybershield_enrolled_courses', JSON.stringify(parsed));
+              } else {
+                setEnrolledCourseIds([]);
+              }
+              const userSavedLessons = localStorage.getItem(`cybershield_completed_${user.email}`);
+              if (userSavedLessons) {
+                const parsed = JSON.parse(userSavedLessons);
+                setCompletedLessonIds(parsed);
+                localStorage.setItem('cybershield_completed_lessons', JSON.stringify(parsed));
+              } else {
+                setCompletedLessonIds([]);
+              }
+            } catch {
+              setEnrolledCourseIds([]);
+              setCompletedLessonIds([]);
+            }
             if (pendingCourse) {
               setActiveCourse(pendingCourse);
               setPendingCourse(null);
@@ -462,6 +732,17 @@ export default function App() {
           courseId={upgradeModalCourseId}
           onClose={() => setUpgradeModalCourseId(null)}
           onEnrollSuccess={(cId) => handleEnrollSuccess(cId)}
+        />
+      )}
+
+      {/* Internship Application Modal */}
+      {internshipModalOpen && (
+        <InternshipModal
+          selectedTrack={selectedInternshipTrack}
+          onClose={() => {
+            setInternshipModalOpen(false);
+            setSelectedInternshipTrack(undefined);
+          }}
         />
       )}
 

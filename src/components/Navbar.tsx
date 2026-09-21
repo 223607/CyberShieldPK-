@@ -28,6 +28,7 @@ interface NavbarProps {
   onSelectDomain: (domainId: string) => void;
   onOpenSocSimulator: () => void;
   currentUser: { name: string; email: string } | null;
+  activeView?: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -37,22 +38,29 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigateSection,
   onSelectDomain,
   onOpenSocSimulator,
-  currentUser
+  currentUser,
+  activeView = 'all'
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [domainsDropdownOpen, setDomainsDropdownOpen] = useState(false);
+  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const moreDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
       if (domainsDropdownOpen) setDomainsDropdownOpen(false);
+      if (moreDropdownOpen) setMoreDropdownOpen(false);
     };
 
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDomainsDropdownOpen(false);
+      }
+      if (moreDropdownRef.current && !moreDropdownRef.current.contains(e.target as Node)) {
+        setMoreDropdownOpen(false);
       }
     };
 
@@ -62,19 +70,21 @@ export const Navbar: React.FC<NavbarProps> = ({
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [domainsDropdownOpen]);
+  }, [domainsDropdownOpen, moreDropdownOpen]);
 
   const navItems = [
     { label: 'Home', id: 'hero' },
+    { label: 'Domains Tracks', id: 'domains' },
     { label: 'Academy', id: 'academy' },
-    { label: 'Threat Desk & Roadmaps', id: 'threat-feed' },
-    { label: 'Labs', id: 'labs' },
-    { label: 'Tools', id: 'tools' },
-    { label: 'Articles', id: 'articles' },
-    { label: 'Projects', id: 'projects' },
-    { label: 'Services', id: 'services' },
-    { label: 'Resources', id: 'resources' },
-    { label: 'Portfolio', id: 'portfolio' }
+    { label: 'Hands-on Labs', id: 'labs' },
+    { label: 'Tools Directory', id: 'tools' },
+    { label: 'Articles & Writeups', id: 'articles' },
+    { label: 'Production Projects', id: 'projects' },
+    { label: 'Security Services', id: 'services' },
+    { label: 'Resources & Cheatsheets', id: 'resources' },
+    { label: 'Founder Portfolio', id: 'portfolio' },
+    { label: 'Threat Desk', id: 'threat-feed' },
+    { label: 'Fellowship & Internship 2026', id: 'internship' }
   ];
 
   const handleNavClick = (id: string) => {
@@ -120,8 +130,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Desktop Navigation */}
         <nav className="hidden lg:flex items-center gap-1">
           <button
+            type="button"
             onClick={() => handleNavClick('hero')}
-            className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40 rounded transition-colors"
+            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors cursor-pointer ${
+              activeView === 'hero' || activeView === 'all'
+                ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-bold'
+                : 'text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40'
+            }`}
           >
             Home
           </button>
@@ -130,7 +145,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDomainsDropdownOpen(!domainsDropdownOpen)}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40 rounded transition-colors"
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition-colors cursor-pointer ${
+                activeView === 'domains'
+                  ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-bold'
+                  : 'text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40'
+              }`}
               aria-expanded={domainsDropdownOpen}
             >
               <span>Domains</span>
@@ -147,11 +166,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {DOMAINS.map((domain) => (
                     <button
                       key={domain.id}
-                      onClick={() => {
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         onSelectDomain(domain.id);
                         setDomainsDropdownOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-cyan-950/40 hover:text-cyan-300 transition-colors flex items-center justify-between group"
+                      className="w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-cyan-950/40 hover:text-cyan-300 transition-colors flex items-center justify-between group cursor-pointer"
                     >
                       <span className="text-slate-200 group-hover:text-cyan-300 font-medium">
                         {domain.title}
@@ -164,8 +186,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <div className="pt-2 border-t border-slate-800/80 mt-1">
                   <button
-                    onClick={() => handleNavClick('domains')}
-                    className="w-full text-center text-[11px] font-mono text-cyan-400 hover:text-cyan-300 py-1"
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleNavClick('domains');
+                    }}
+                    className="w-full text-center text-[11px] font-mono text-cyan-400 hover:text-cyan-300 py-1 cursor-pointer"
                   >
                     View All Domain Tracks →
                   </button>
@@ -175,73 +201,121 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={() => handleNavClick('academy')}
-            className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40 rounded transition-colors"
+            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors cursor-pointer ${
+              activeView === 'academy'
+                ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-bold'
+                : 'text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40'
+            }`}
           >
             Academy
           </button>
           <button
+            type="button"
+            onClick={() => handleNavClick('labs')}
+            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors cursor-pointer ${
+              activeView === 'labs'
+                ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-bold'
+                : 'text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40'
+            }`}
+          >
+            Labs
+          </button>
+          {/* More Dropdown (Tools, Articles, Projects, Services, Resources, Portfolio) */}
+          <div className="relative" ref={moreDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setMoreDropdownOpen(!moreDropdownOpen)}
+              className={`px-2.5 py-1.5 text-xs font-medium rounded transition-colors flex items-center gap-1 cursor-pointer ${
+                ['tools', 'articles', 'projects', 'services', 'resources', 'portfolio'].includes(activeView)
+                  ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-bold'
+                  : 'text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40'
+              }`}
+            >
+              <span>More</span>
+              <ChevronDown className={`w-3 h-3 transition-transform ${moreDropdownOpen ? 'rotate-180 text-cyan-400' : 'text-slate-400'}`} />
+            </button>
+
+            {moreDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-64 rounded-xl bg-[#091120] border border-cyan-500/40 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="text-[10px] font-mono text-slate-400 px-3 py-1 uppercase tracking-wider border-b border-slate-800/80 mb-1">
+                  Explore Platform
+                </div>
+                {[
+                  { id: 'tools', label: 'Security Tools Directory', icon: Wrench, desc: 'Scanners & decoders' },
+                  { id: 'articles', label: 'Threat Research Articles', icon: FileText, desc: 'CVEs & deep-dives' },
+                  { id: 'projects', label: 'Production Projects', icon: Cpu, desc: 'Open source & blueprints' },
+                  { id: 'services', label: 'Security Services', icon: Briefcase, desc: 'Audits & pentesting' },
+                  { id: 'resources', label: 'Resources & Cheatsheets', icon: Layers, desc: 'Payloads & guides' },
+                  { id: 'portfolio', label: 'Founder Portfolio', icon: User, desc: 'Muhammad Zaib Zafar' }
+                ].map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeView === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        handleNavClick(item.id);
+                        setMoreDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2.5 cursor-pointer ${
+                        isActive
+                          ? 'bg-cyan-950/70 text-cyan-300 border border-cyan-500/30'
+                          : 'text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold truncate">{item.label}</div>
+                        <div className="text-[10px] text-slate-400 truncate">{item.desc}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Dedicated Highlights: Threat Desk and Internship */}
+          <button
+            type="button"
             onClick={() => handleNavClick('threat-feed')}
-            className="px-2.5 py-1.5 text-xs font-medium text-red-300 hover:text-red-200 hover:bg-red-950/40 rounded transition-colors flex items-center gap-1 font-mono"
+            className={`px-2.5 py-1.5 text-xs font-medium rounded transition-colors flex items-center gap-1 font-mono cursor-pointer ${
+              activeView === 'threat-feed'
+                ? 'bg-red-950/90 text-red-300 border border-red-500/50 font-bold shadow-sm'
+                : 'text-red-300 hover:text-red-200 hover:bg-red-950/40'
+            }`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
             <span>Threat Desk</span>
           </button>
           <button
-            onClick={() => handleNavClick('labs')}
-            className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40 rounded transition-colors"
+            type="button"
+            onClick={() => handleNavClick('internship')}
+            className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 font-mono cursor-pointer ${
+              activeView === 'internship'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.25)]'
+                : 'text-cyan-300 hover:text-cyan-200 bg-cyan-950/50 hover:bg-cyan-900/50 border border-cyan-500/40'
+            }`}
           >
-            Labs
-          </button>
-          <button
-            onClick={() => handleNavClick('tools')}
-            className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40 rounded transition-colors"
-          >
-            Tools
-          </button>
-          <button
-            onClick={() => handleNavClick('articles')}
-            className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40 rounded transition-colors"
-          >
-            Articles
-          </button>
-          <button
-            onClick={() => handleNavClick('projects')}
-            className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40 rounded transition-colors"
-          >
-            Projects
-          </button>
-          <button
-            onClick={() => handleNavClick('services')}
-            className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40 rounded transition-colors"
-          >
-            Services
-          </button>
-          <button
-            onClick={() => handleNavClick('resources')}
-            className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40 rounded transition-colors"
-          >
-            Resources
-          </button>
-          <button
-            onClick={() => handleNavClick('portfolio')}
-            className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-cyan-400 hover:bg-slate-800/40 rounded transition-colors"
-          >
-            Portfolio
+            <span>Internship</span>
+            <span className="text-[9px] px-1 bg-cyan-500/20 text-cyan-300 rounded font-bold">2026</span>
           </button>
         </nav>
 
         {/* Right Actions: Search, SOC, Auth */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-2.5">
           {/* SOC Dashboard Button */}
           <button
             onClick={onOpenSocSimulator}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono font-bold text-emerald-400 bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 rounded-lg transition-all shadow-[0_0_12px_rgba(52,211,153,0.15)] cursor-pointer"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-[11px] font-mono font-bold text-emerald-400 bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 rounded-lg transition-all shadow-[0_0_12px_rgba(52,211,153,0.15)] cursor-pointer"
             title="Open Live SOC Operations Dashboard"
           >
             <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
-            <span className="hidden md:inline">LIVE SOC DASHBOARD</span>
-            <span className="md:hidden">SOC OPS</span>
+            <span className="hidden xl:inline">LIVE SOC DASHBOARD</span>
+            <span className="xl:hidden">SOC OPS</span>
           </button>
 
           {/* Search Trigger */}
@@ -320,7 +394,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className="w-full text-left px-3 py-2.5 text-sm font-medium text-slate-200 hover:text-cyan-400 hover:bg-slate-800/60 rounded-lg transition-colors flex items-center justify-between"
+                className={`w-full text-left px-3 py-2.5 text-sm font-medium rounded-lg transition-colors flex items-center justify-between cursor-pointer ${
+                  activeView === item.id 
+                    ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-bold'
+                    : 'text-slate-200 hover:text-cyan-400 hover:bg-slate-800/60'
+                }`}
               >
                 <span>{item.label}</span>
                 <span className="text-xs text-slate-500">→</span>

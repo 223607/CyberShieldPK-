@@ -60,7 +60,7 @@ export const Hero: React.FC<HeroProps> = ({
   return (
     <section 
       id="hero" 
-      className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-visible cyber-grid-bg border-b border-slate-800/80"
+      className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden cyber-grid-bg border-b border-slate-800/80 w-full max-w-full"
     >
       {/* Subtle Background Glows - Controlled & Non-blocking */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-full max-w-4xl h-80 bg-gradient-to-tr from-cyan-950/20 via-blue-900/15 to-transparent blur-3xl pointer-events-none -z-10" />
@@ -217,7 +217,7 @@ export const Hero: React.FC<HeroProps> = ({
               {/* Terminal Screen Content */}
               <div className="p-4 bg-slate-950/95 font-mono text-xs space-y-1.5 min-h-[260px] max-h-[300px] overflow-y-auto rounded-b-xl select-text">
                 {terminalOutputs[terminalTab].map((line, idx) => (
-                  <div key={idx} className={`${line.color} leading-relaxed`}>
+                  <div key={idx} className={`${line.color} leading-relaxed break-all`}>
                     {line.text}
                   </div>
                 ))}

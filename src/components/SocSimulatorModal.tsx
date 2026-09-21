@@ -32,6 +32,7 @@ import { SocReportsPage } from './soc/SocReportsPage';
 import { SocSettingsPage } from './soc/SocSettingsPage';
 import { SocWazuhConnector } from './soc/SocWazuhConnector';
 import { SocEndpointInspector } from './soc/SocEndpointInspector';
+import { SocRealtimeAgentMonitor } from './soc/SocRealtimeAgentMonitor';
 import { initialAlerts, Alert, AlertStatus } from '../data/socDashboardData';
 
 interface SocSimulatorModalProps {
@@ -40,6 +41,7 @@ interface SocSimulatorModalProps {
 
 export type SocTab = 
   | 'overview' 
+  | 'realtime-agent'
   | 'wazuh-connector'
   | 'endpoint-inspector'
   | 'threat-intel' 
@@ -161,7 +163,8 @@ export const SocSimulatorModal: React.FC<SocSimulatorModalProps> = ({ onClose })
 
   const navTabs: NavTabItem[] = [
     { id: 'overview', label: 'Dashboard', icon: Activity },
-    { id: 'wazuh-connector', label: 'Wazuh Live Agent', icon: Terminal },
+    { id: 'realtime-agent', label: 'Live EDR Agent', icon: Radio },
+    { id: 'wazuh-connector', label: 'Wazuh CLI Agent', icon: Terminal },
     { id: 'endpoint-inspector', label: 'Endpoint Activities (IP)', icon: Laptop },
     { id: 'threat-intel', label: 'Threat Intel', icon: ShieldAlert },
     { id: 'alerts', label: 'Alerts & Events', icon: Bell, badge: alerts.filter(a => a.status === 'open').length },
@@ -415,6 +418,10 @@ export const SocSimulatorModal: React.FC<SocSimulatorModalProps> = ({ onClose })
                 }}
                 onNavigateTab={(tab) => setActiveTab(tab as SocTab)}
               />
+            )}
+
+            {activeTab === 'realtime-agent' && (
+              <SocRealtimeAgentMonitor />
             )}
 
             {activeTab === 'wazuh-connector' && (

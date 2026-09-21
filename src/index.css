@@ -10,11 +10,19 @@
     --cyber-purple: #8b5cf6;
   }
 
-  body {
+  html, body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     background-color: #060c16;
     color: #e2e8f0;
+    width: 100%;
+    max-width: 100vw;
     overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
   }
 
   code, pre, .font-mono {

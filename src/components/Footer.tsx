@@ -21,12 +21,16 @@ interface FooterProps {
   onNavigateSection: (sectionId: string) => void;
   onOpenSoc: () => void;
   onOpenPrivacyModal?: () => void;
+  onOpenContact?: () => void;
+  onOpenInternship?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onNavigateSection,
   onOpenSoc,
-  onOpenPrivacyModal
+  onOpenPrivacyModal,
+  onOpenContact,
+  onOpenInternship
 }) => {
   return (
     <footer className="bg-[#040810] text-slate-400 border-t border-slate-800/80 pt-16 pb-12 font-sans">
@@ -56,28 +60,29 @@ export const Footer: React.FC<FooterProps> = ({
             </p>
 
             <div className="flex items-center gap-3 pt-2">
-              <a
-                href="mailto:contact@cybershieldpk.org"
-                className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-500/50 flex items-center justify-center text-slate-400 hover:text-cyan-400 transition-colors"
-                title="Email Us"
+              <button
+                type="button"
+                onClick={onOpenContact ? onOpenContact : () => window.open('mailto:zaibzafar936@gmail.com')}
+                className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-500/50 flex items-center justify-center text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
+                title="Direct Founder Contact (zaibzafar936@gmail.com)"
               >
                 <Mail className="w-4 h-4" />
-              </a>
+              </button>
               <a
-                href="https://linkedin.com"
+                href="https://www.linkedin.com/in/muhammadzaibzafar"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-500/50 flex items-center justify-center text-slate-400 hover:text-cyan-400 transition-colors"
-                title="LinkedIn"
+                title="LinkedIn Profile: Muhammad Zaib Zafar"
               >
                 <Linkedin className="w-4 h-4" />
               </a>
               <a
-                href="https://github.com"
+                href="https://github.com/zaibzafar936"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-500/50 flex items-center justify-center text-slate-400 hover:text-cyan-400 transition-colors"
-                title="GitHub"
+                title="GitHub Profile: @zaibzafar936"
               >
                 <Github className="w-4 h-4" />
               </a>
@@ -93,7 +98,7 @@ export const Footer: React.FC<FooterProps> = ({
               <li>
                 <button 
                   onClick={() => onNavigateSection('domains')} 
-                  className="hover:text-cyan-400 transition-colors"
+                  className="hover:text-cyan-400 transition-colors cursor-pointer"
                 >
                   Cyber Domains (9)
                 </button>
@@ -101,15 +106,24 @@ export const Footer: React.FC<FooterProps> = ({
               <li>
                 <button 
                   onClick={() => onNavigateSection('academy')} 
-                  className="hover:text-cyan-400 transition-colors"
+                  className="hover:text-cyan-400 transition-colors cursor-pointer"
                 >
                   Academy Courses
                 </button>
               </li>
               <li>
                 <button 
+                  onClick={() => onNavigateSection('internship')} 
+                  className="text-cyan-400 font-bold hover:text-cyan-300 transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <span>Internship 2026</span>
+                  <span className="text-[9px] px-1 bg-cyan-950 text-cyan-300 rounded border border-cyan-500/40">NEW</span>
+                </button>
+              </li>
+              <li>
+                <button 
                   onClick={() => onNavigateSection('labs')} 
-                  className="hover:text-cyan-400 transition-colors"
+                  className="hover:text-cyan-400 transition-colors cursor-pointer"
                 >
                   Hands-on Cyber Labs
                 </button>
@@ -117,7 +131,7 @@ export const Footer: React.FC<FooterProps> = ({
               <li>
                 <button 
                   onClick={() => onNavigateSection('tools')} 
-                  className="hover:text-cyan-400 transition-colors"
+                  className="hover:text-cyan-400 transition-colors cursor-pointer"
                 >
                   Security Tools Directory
                 </button>
@@ -125,7 +139,7 @@ export const Footer: React.FC<FooterProps> = ({
               <li>
                 <button 
                   onClick={onOpenSoc} 
-                  className="text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 font-mono"
+                  className="text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 font-mono cursor-pointer"
                 >
                   <Radio className="w-3 h-3 animate-pulse" />
                   <span>SOC Simulator</span>

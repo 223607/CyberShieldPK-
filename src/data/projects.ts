@@ -14,7 +14,7 @@ export const PROJECTS: Project[] = [
     objective: 'Establish automated compliance auditing and real-time detection of privilege escalation, lateral movement, and unauthorized file modifications across 20+ servers.',
     status: 'IN_PRODUCTION',
     evidenceLink: 'https://www.linkedin.com/posts/muhammadzaibzafar_vulnerability-research-and-analysis-using-activity-7344977843585519616-sT0u',
-    githubUrl: 'https://github.com/cybershieldpk',
+    githubUrl: 'https://github.com/zaibzafar936',
     architecture: 'Lightweight Wazuh agents deployed on Windows Server and Ubuntu endpoints feeding encrypted JSON event streams to an isolated Wazuh Manager cluster on AWS VPC with automated Slack incident dispatch.',
     architectureDetails: 'Lightweight Wazuh agents deployed on Windows Server and Ubuntu endpoints feeding encrypted JSON event streams to an isolated Wazuh Manager cluster on AWS VPC with automated Slack incident dispatch.',
     keyFindings: [
@@ -42,7 +42,7 @@ export const PROJECTS: Project[] = [
     objective: 'Generate real-world attack telemetry (Pass-the-Hash, Kerberoasting, Golden Ticket) using Atomic Red Team scripts and author Splunk detection searches.',
     status: 'COMPLETED',
     evidenceLink: 'https://www.linkedin.com/in/muhammadzaibzafar',
-    githubUrl: 'https://github.com/cybershieldpk',
+    githubUrl: 'https://github.com/zaibzafar936',
     architecture: 'Domain Controller running Windows Server 2022, two domain-joined Windows 11 workstations, and an offensive Kali Linux pivot host on an isolated hypervisor vSwitch.',
     architectureDetails: 'Domain Controller running Windows Server 2022, two domain-joined Windows 11 workstations, and an offensive Kali Linux pivot host on an isolated hypervisor vSwitch.',
     keyFindings: [
@@ -70,7 +70,7 @@ export const PROJECTS: Project[] = [
     objective: 'Identify high and critical security flaws in authentication flows, input handling, and authorization checks prior to production deployment.',
     status: 'COMPLETED',
     evidenceLink: 'https://www.linkedin.com/posts/muhammadzaibzafar_web-app-hacking-burp-suite-analysis-report-activity-7417118419231281152-t5W4',
-    githubUrl: 'https://github.com/cybershieldpk',
+    githubUrl: 'https://github.com/zaibzafar936',
     architecture: 'Full black-box and grey-box security assessment including network boundary testing, SSL/TLS protocol inspection, and deep manual API endpoint tampering.',
     architectureDetails: 'Full black-box and grey-box security assessment including network boundary testing, SSL/TLS protocol inspection, and deep manual API endpoint tampering.',
     keyFindings: [
@@ -98,7 +98,7 @@ export const PROJECTS: Project[] = [
     objective: 'Provide early-warning threat intelligence by monitoring dark web leak directories for exposed organizational domain credentials and intellectual property.',
     status: 'ACTIVE_RESEARCH',
     evidenceLink: 'https://www.linkedin.com/posts/muhammadzaibzafar_dark-web-awareness-a-professional-educational-activity-7445067915495768066-JVoY',
-    githubUrl: 'https://github.com/cybershieldpk',
+    githubUrl: 'https://github.com/zaibzafar936',
     architecture: 'Air-gapped non-persistent Whonix virtual workstation utilizing Tor gateway isolation with DNS leak prevention and hardened browser settings.',
     architectureDetails: 'Air-gapped non-persistent Whonix virtual workstation utilizing Tor gateway isolation with DNS leak prevention and hardened browser settings.',
     keyFindings: [
@@ -126,7 +126,7 @@ export const PROJECTS: Project[] = [
     objective: 'Reconstruct the chronological order of adversary actions from initial phishing execution to data exfiltration staging.',
     status: 'COMPLETED',
     evidenceLink: 'https://www.linkedin.com/in/muhammadzaibzafar',
-    githubUrl: 'https://github.com/cybershieldpk',
+    githubUrl: 'https://github.com/zaibzafar936',
     architecture: '4GB raw memory image and E01 forensic disk image investigated in an isolated digital forensics laboratory environment.',
     architectureDetails: '4GB raw memory image and E01 forensic disk image investigated in an isolated digital forensics laboratory environment.',
     keyFindings: [
@@ -154,7 +154,7 @@ export const PROJECTS: Project[] = [
     objective: 'Empower Tier-1 SOC analysts to accelerate alert triage times from 15 minutes down to under 3 minutes per high-severity incident.',
     status: 'IN_PRODUCTION',
     evidenceLink: 'https://www.linkedin.com/in/muhammadzaibzafar',
-    githubUrl: 'https://github.com/cybershieldpk',
+    githubUrl: 'https://github.com/zaibzafar936',
     architecture: 'Unified web client interfacing with Wazuh API and external threat feeds (AlienVault OTX, VirusTotal) with automated MITRE ATT&CK categorization.',
     architectureDetails: 'Unified web client interfacing with Wazuh API and external threat feeds (AlienVault OTX, VirusTotal) with automated MITRE ATT&CK categorization.',
     keyFindings: [

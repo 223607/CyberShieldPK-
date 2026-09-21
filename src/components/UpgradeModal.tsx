@@ -15,9 +15,16 @@ import {
   Clock,
   Printer,
   ChevronRight,
-  Tag
+  Tag,
+  HelpCircle
 } from 'lucide-react';
 import { COURSES } from '../data/courses';
+import { 
+  validateCreditCard, 
+  validatePakistaniMobileWallet, 
+  validateBankReference, 
+  TEST_CARDS 
+} from '../utils/paymentValidation';
 
 interface UpgradeModalProps {
   courseId?: string | null;
@@ -40,16 +47,17 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [promoMessage, setPromoMessage] = useState<string | null>(null);
 
-  // Card details
-  const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
-  const [cardHolder, setCardHolder] = useState('Muhammad Zaib Zafar');
-  const [cardExpiry, setCardExpiry] = useState('12/28');
-  const [cardCvc, setCardCvc] = useState('883');
+  // Card details (clean by default for strict validation check)
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
+  const [showSandboxCards, setShowSandboxCards] = useState(false);
 
   // Mobile wallet details (JazzCash / Easypaisa)
   const [walletProvider, setWalletProvider] = useState<'easypaisa' | 'jazzcash' | 'raast'>('easypaisa');
-  const [mobileNumber, setMobileNumber] = useState('0300-1234567');
-  const [walletCnic, setWalletCnic] = useState('35201-1234567-1');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [walletCnic, setWalletCnic] = useState('');
 
   // Bank Transfer details
   const [bankDepositRef, setBankDepositRef] = useState('');
@@ -86,24 +94,36 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
     }
   };
 
+  const handleFillTestCard = (testCard: typeof TEST_CARDS[0]) => {
+    setCardNumber(testCard.number);
+    setCardHolder(testCard.holder);
+    setCardExpiry(testCard.expiry);
+    setCardCvc(testCard.cvv);
+    setFormError(null);
+    setShowSandboxCards(false);
+  };
+
   const handleExecutePayment = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
-    // Validation
+    // Strict Authenticity & Checksum Validation
     if (selectedMethod === 'card') {
-      if (!cardHolder.trim() || !cardNumber.trim() || !cardExpiry.trim() || !cardCvc.trim()) {
-        setFormError('Please complete all credit/debit card payment fields.');
+      const cardResult = validateCreditCard(cardNumber, cardExpiry, cardCvc, cardHolder);
+      if (!cardResult.isValid) {
+        setFormError(cardResult.errorMessage || 'Invalid credit/debit card information.');
         return;
       }
     } else if (selectedMethod === 'mobile_wallet') {
-      if (!mobileNumber.trim() || mobileNumber.length < 10) {
-        setFormError('Please enter a valid Pakistani mobile number (e.g. 0300-1234567).');
+      const walletResult = validatePakistaniMobileWallet(mobileNumber, walletCnic, walletProvider);
+      if (!walletResult.isValid) {
+        setFormError(walletResult.errorMessage || 'Invalid mobile wallet credentials.');
         return;
       }
     } else if (selectedMethod === 'bank_transfer') {
-      if (!bankDepositRef.trim()) {
-        setFormError('Please enter your Bank Deposit / Transaction Reference ID (TID).');
+      const bankResult = validateBankReference(bankDepositRef);
+      if (!bankResult.isValid) {
+        setFormError(bankResult.errorMessage || 'Invalid bank transaction reference ID.');
         return;
       }
     }
@@ -113,11 +133,11 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
     setProcessingStep('Connecting to secure banking payment gateway (256-bit SSL)...');
 
     setTimeout(() => {
-      setProcessingStep('Authorizing credentials with clearing house...');
+      setProcessingStep('Validating card authenticity with payment network...');
     }, 900);
 
     setTimeout(() => {
-      setProcessingStep('Fraud telemetry check passed. Approving transaction...');
+      setProcessingStep('Fraud telemetry check passed (Luhn Verified). Approving transaction...');
     }, 1800);
 
     setTimeout(() => {
@@ -350,27 +370,71 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
                 {selectedMethod === 'card' && (
                   <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                      <span className="text-xs font-mono text-slate-300 font-semibold">Card Details</span>
-                      <span className="text-[10px] font-mono text-slate-500">256-Bit SSL Encrypted</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-slate-300 font-semibold">Card Details</span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30">
+                          Luhn MOD-10 Validated
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowSandboxCards(!showSandboxCards)}
+                        className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <HelpCircle className="w-3 h-3" />
+                        <span>{showSandboxCards ? 'Hide Sandbox Cards' : 'View Sandbox Test Cards'}</span>
+                      </button>
                     </div>
+
+                    {showSandboxCards && (
+                      <div className="p-3 rounded-lg bg-[#0c1626] border border-cyan-500/30 text-xs font-mono space-y-2">
+                        <div className="text-[11px] text-cyan-300 font-bold flex items-center justify-between">
+                          <span>Sandbox Test Card Numbers (Passes Strict Luhn Check):</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                          {TEST_CARDS.map((tc) => (
+                            <div key={tc.number} className="p-2 rounded bg-slate-950/80 border border-slate-800 text-[11px] flex flex-col justify-between gap-1">
+                              <div>
+                                <span className="text-cyan-400 font-bold">{tc.brand}: </span>
+                                <span className="text-white tracking-wider">{tc.number}</span>
+                              </div>
+                              <div className="text-slate-400 text-[10px]">
+                                Exp: {tc.expiry} • CVV: {tc.cvv}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleFillTestCard(tc)}
+                                className="mt-1 w-full py-1 px-2 rounded bg-cyan-950 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 text-[10px] font-bold cursor-pointer transition-colors"
+                              >
+                                Autofill {tc.brand}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-800">
+                          ⚠️ Note: Random numbers or unverified test values will fail the automated Luhn checksum and will be rejected.
+                        </p>
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                        Cardholder Name
+                        Cardholder Name (as shown on card)
                       </label>
                       <input
                         type="text"
                         required
                         value={cardHolder}
                         onChange={(e) => setCardHolder(e.target.value)}
-                        placeholder="Muhammad Zaib Zafar"
+                        placeholder="e.g. Muhammad Zaib Zafar"
                         className="w-full px-3 py-2 bg-[#060c17] border border-slate-800 rounded-lg text-xs text-white font-mono focus:outline-none focus:border-cyan-500"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                        Card Number
+                      <label className="block text-[11px] font-mono text-slate-400 mb-1 flex justify-between">
+                        <span>Card Number</span>
+                        <span className="text-slate-500">16 digits (Visa: 4... / MC: 5...)</span>
                       </label>
                       <input
                         type="text"
@@ -385,14 +449,14 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                          Expiry Date
+                          Expiry Date (MM/YY)
                         </label>
                         <input
                           type="text"
                           required
                           value={cardExpiry}
                           onChange={(e) => setCardExpiry(e.target.value)}
-                          placeholder="MM/YY"
+                          placeholder="MM/YY (e.g. 12/28)"
                           className="w-full px-3 py-2 bg-[#060c17] border border-slate-800 rounded-lg text-xs text-white font-mono focus:outline-none focus:border-cyan-500"
                         />
                       </div>

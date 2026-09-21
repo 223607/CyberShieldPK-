@@ -223,22 +223,22 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
               {/* Social Channels */}
               <div className="pt-4 border-t border-slate-800/80 space-y-2">
                 <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
-                  Connect on Professional Networks:
+                  Connect Directly with Founder:
                 </span>
                 <div className="flex flex-col gap-2">
                   <a
-                    href="mailto:contact@cybershieldpk.org"
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 text-xs font-mono text-slate-300 hover:text-cyan-300 hover:border-cyan-500/30 transition-colors"
+                    href="mailto:zaibzafar936@gmail.com"
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-cyan-500/30 text-xs font-mono text-cyan-300 hover:text-cyan-200 hover:border-cyan-400 transition-colors"
                   >
                     <span className="flex items-center gap-2">
                       <Mail className="w-4 h-4 text-cyan-400" />
-                      <span>contact@cybershieldpk.org</span>
+                      <span>zaibzafar936@gmail.com (Direct Email)</span>
                     </span>
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                    <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
                   </a>
 
                   <a
-                    href="https://linkedin.com"
+                    href="https://www.linkedin.com/in/muhammadzaibzafar"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 text-xs font-mono text-slate-300 hover:text-cyan-300 hover:border-cyan-500/30 transition-colors"
@@ -251,14 +251,14 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
                   </a>
 
                   <a
-                    href="https://github.com"
+                    href="https://github.com/zaibzafar936"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 text-xs font-mono text-slate-300 hover:text-cyan-300 hover:border-cyan-500/30 transition-colors"
                   >
                     <span className="flex items-center gap-2">
                       <Github className="w-4 h-4 text-cyan-400" />
-                      <span>GitHub / CyberShieldPK</span>
+                      <span>GitHub / @zaibzafar936 (Personal Repository)</span>
                     </span>
                     <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
                   </a>
