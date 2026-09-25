@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getSocAgents, getSocAlerts, subscribeSocAlerts } from '../services/socApi';
 import { 
   Radio, 
   ShieldAlert, 
@@ -35,7 +36,10 @@ interface SimulatedLog {
 export const SocSimulatorSection: React.FC<SocSimulatorSectionProps> = ({ onOpenSocModal }) => {
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'CRITICAL' | 'HIGH'>('ALL');
   const [liveEventCount, setLiveEventCount] = useState(14820);
-  const [isSimulating, setIsSimulating] = useState(true);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [realAgents, setRealAgents] = useState<any[]>([]);
+  const [realAlertCount, setRealAlertCount] = useState(0);
+  const [socConnected, setSocConnected] = useState(false);
 
   const [logs, setLogs] = useState<SimulatedLog[]>([
     {
@@ -72,7 +76,17 @@ export const SocSimulatorSection: React.FC<SocSimulatorSectionProps> = ({ onOpen
     }
   ]);
 
-  // Simulate periodic new log entries
+  useEffect(() => {
+    let mounted=true;
+    Promise.all([getSocAgents(),getSocAlerts()]).then(([agents,alerts])=>{
+      if(!mounted)return;
+      setRealAgents(agents); setRealAlertCount(alerts.length); setLiveEventCount(alerts.length); setSocConnected(true);
+    }).catch(()=>setSocConnected(false));
+    const stop=subscribeSocAlerts(()=>{if(mounted){setRealAlertCount(v=>v+1);setLiveEventCount(v=>v+1);}},setSocConnected);
+    return ()=>{mounted=false;stop();};
+  }, []);
+
+  // Simulation is disabled by default; real Wazuh SSE is the live source.
   useEffect(() => {
     if (!isSimulating) return;
     const interval = setInterval(() => {
@@ -97,10 +111,10 @@ export const SocSimulatorSection: React.FC<SocSimulatorSectionProps> = ({ onOpen
           <div>
             <div className="flex items-center gap-2 text-emerald-400 font-mono text-xs uppercase tracking-widest mb-2">
               <Radio className="w-4 h-4 animate-pulse" />
-              <span>Live Defensive Operations & SIEM Simulation</span>
+              <span>Live Defensive Operations & Wazuh SIEM</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Enterprise SOC & Wazuh SIEM Simulator
+              Enterprise SOC & Wazuh SIEM
             </h2>
             <p className="mt-2 text-slate-400 text-sm sm:text-base max-w-2xl">
               Experience an authentic Tier-1 and Tier-2 Security Operations Center. Monitor active host heartbeats, inspect Sysmon alerts, analyze MITRE ATT&CK vectors, and execute real-time incident responses.
@@ -128,7 +142,7 @@ export const SocSimulatorSection: React.FC<SocSimulatorSectionProps> = ({ onOpen
             <div>
               <div className="text-[10px] font-mono text-slate-400 uppercase">Monitored Agents</div>
               <div className="text-lg font-bold text-white flex items-center gap-1.5">
-                <span>14 Active</span>
+                <span>{realAgents.length ? realAgents.filter(a => a.status === 'active').length + ' Active' : '— Active'}</span>
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               </div>
             </div>
@@ -152,7 +166,7 @@ export const SocSimulatorSection: React.FC<SocSimulatorSectionProps> = ({ onOpen
             </div>
             <div>
               <div className="text-[10px] font-mono text-slate-400 uppercase">Mitigated Attacks</div>
-              <div className="text-lg font-bold text-white font-mono">412 Blocked</div>
+              <div className="text-lg font-bold text-white font-mono">{realAlertCount || '—'} Live</div>
             </div>
           </div>
 
@@ -162,7 +176,7 @@ export const SocSimulatorSection: React.FC<SocSimulatorSectionProps> = ({ onOpen
             </div>
             <div>
               <div className="text-[10px] font-mono text-slate-400 uppercase">Decoders & Rules</div>
-              <div className="text-lg font-bold text-white font-mono">4,110 Rules</div>
+              <div className="text-lg font-bold text-white font-mono">{socConnected ? 'Wazuh Connected' : 'Wazuh Offline'}</div>
             </div>
           </div>
         </div>
