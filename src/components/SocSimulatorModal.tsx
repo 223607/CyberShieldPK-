@@ -34,6 +34,8 @@ import { SocWazuhConnector } from './soc/SocWazuhConnector';
 import { SocEndpointInspector } from './soc/SocEndpointInspector';
 import { SocRealtimeAgentMonitor } from './soc/SocRealtimeAgentMonitor';
 import { initialAlerts, Alert, AlertStatus } from '../data/socDashboardData';
+import { getSocAlerts, getSocAgents, subscribeSocAlerts } from '../services/socApi';
+import type { LiveSocAlert } from '../services/socApi';
 
 interface SocSimulatorModalProps {
   onClose: () => void;
@@ -62,6 +64,34 @@ export const SocSimulatorModal: React.FC<SocSimulatorModalProps> = ({ onClose })
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
   const [recentNotification, setRecentNotification] = useState<string | null>(null);
+  const [socConnected, setSocConnected] = useState(false);
+  const [agentCount, setAgentCount] = useState({ total: 0, active: 0 });
+
+  // Real Wazuh feed: initial REST snapshot + Server-Sent Events for new alerts.
+  useEffect(() => {
+    let mounted = true;
+    const mapAlert = (a: LiveSocAlert): Alert => ({
+      id: a.id, timestamp: a.timestamp, type: a.ruleName,
+      severity: a.severity === 'CRITICAL' ? 'critical' : a.severity === 'HIGH' ? 'high' : a.severity === 'MEDIUM' ? 'medium' : 'low',
+      status: 'open', source: a.sourceIp || a.endpoint, destination: a.destinationIp || '-', protocol: 'Wazuh', port: 0, country: '-', description: a.ruleName
+    });
+    (async () => {
+      try {
+        const [liveAlerts, agents] = await Promise.all([getSocAlerts(), getSocAgents()]);
+        if (!mounted) return;
+        if (liveAlerts.length) setAlerts(liveAlerts.map(mapAlert));
+        setAgentCount({ total: agents.length, active: agents.filter((a:any) => a.status === 'active').length });
+        setSocConnected(true);
+      } catch { setSocConnected(false); }
+    })();
+    const stop = subscribeSocAlerts(a => {
+      if (!mounted) return;
+      const item = mapAlert(a);
+      setAlerts(prev => [item, ...prev.filter(x => x.id !== item.id)].slice(0,200));
+      setSocConnected(true);
+    }, setSocConnected);
+    return () => { mounted = false; stop(); };
+  }, []);
 
   // Live real-time clock
   useEffect(() => {
@@ -205,7 +235,7 @@ export const SocSimulatorModal: React.FC<SocSimulatorModalProps> = ({ onClose })
                   CyberShield<span className="text-cyan-400">PK</span> SOC Operations Center
                 </h2>
                 <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40 animate-pulse">
-                  SYSTEM ACTIVE
+                  {socConnected ? 'WAZUH CONNECTED' : 'WAZUH OFFLINE'}
                 </span>
               </div>
               <p className="text-[10px] text-slate-400 font-mono hidden md:block">
@@ -339,10 +369,10 @@ export const SocSimulatorModal: React.FC<SocSimulatorModalProps> = ({ onClose })
               {!sidebarCollapsed ? (
                 <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-[10px] font-mono text-slate-400">
                   <div className="flex items-center justify-between text-white font-bold mb-1">
-                    <span>Wazuh v4.8</span>
+                    <span>Wazuh Live</span>
                     <span className="text-emerald-400">Online</span>
                   </div>
-                  <p className="text-slate-500 truncate">Agent Cluster: 6 Active</p>
+                  <p className="text-slate-500 truncate">Agent Cluster: {agentCount.active} / {agentCount.total} Active</p>
                 </div>
               ) : (
                 <div className="w-8 h-8 rounded-lg bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-center text-emerald-400 mx-auto" title="Wazuh Core Active">
