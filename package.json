@@ -7,9 +7,9 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
+    "clean": "rm -rf dist server-dist",
     "lint": "tsc --noEmit",
-    "start": "node dist/server/index.js",
+    "start": "node server-dist/index.js",
     "server:dev": "tsx server/index.ts",
     "build:full": "tsc -p tsconfig.server.json && vite build"
   },
