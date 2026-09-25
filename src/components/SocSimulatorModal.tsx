@@ -33,7 +33,7 @@ import { SocSettingsPage } from './soc/SocSettingsPage';
 import { SocWazuhConnector } from './soc/SocWazuhConnector';
 import { SocEndpointInspector } from './soc/SocEndpointInspector';
 import { SocRealtimeAgentMonitor } from './soc/SocRealtimeAgentMonitor';
-import { initialAlerts, Alert, AlertStatus } from '../data/socDashboardData';
+import { Alert, AlertStatus } from '../data/socDashboardData';
 import { getSocAlerts, getSocAgents, subscribeSocAlerts } from '../services/socApi';
 import type { LiveSocAlert } from '../services/socApi';
 
@@ -56,7 +56,7 @@ export type SocTab =
 
 export const SocSimulatorModal: React.FC<SocSimulatorModalProps> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<SocTab>('overview');
-  const [alerts, setAlerts] = useState<Alert[]>(initialAlerts);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedAlertForInspection, setSelectedAlertForInspection] = useState<Alert | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -119,60 +119,26 @@ export const SocSimulatorModal: React.FC<SocSimulatorModalProps> = ({ onClose })
     setTimeout(() => setRecentNotification(null), 3000);
   };
 
-  // Trigger synthetic telemetry event (intrusion simulation)
-  const handleTriggerTelemetryEvent = () => {
-    const syntheticId = `ALT-${1093 + alerts.length}`;
-    const attacks = [
-      {
-        type: 'Outbound Reverse TCP Shell Spawned',
-        severity: 'critical' as const,
-        source: '10.0.4.15 (DEV-PC)',
-        destination: '45.33.32.156:4444',
-        protocol: 'TCP',
-        port: 4444,
-        country: 'RU',
-        desc: 'Netcat reverse shell established on port 4444 to external suspicious ASN.'
-      },
-      {
-        type: 'Kerberoasting TGS-REQ Request Spike',
-        severity: 'high' as const,
-        source: '10.0.4.88 (FIN-WKS)',
-        destination: '10.0.1.5 (DC-PROD)',
-        protocol: 'Kerberos',
-        port: 88,
-        country: 'INTERNAL',
-        desc: 'Service Principal Name RC4-HMAC ticket requests for multiple high-privilege service accounts.'
-      },
-      {
-        type: 'DNS Tunneling Query Pattern Detected',
-        severity: 'medium' as const,
-        source: '10.0.3.18 (CORP-SRV)',
-        destination: '8.8.8.8:53',
-        protocol: 'DNS',
-        port: 53,
-        country: 'US',
-        desc: 'Suspicious base64-encoded subdomains queried with high entropy.'
-      }
-    ];
-
-    const pick = attacks[Math.floor(Math.random() * attacks.length)];
-    const newAlert: Alert = {
-      id: syntheticId,
-      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      type: pick.type,
-      severity: pick.severity,
-      status: 'open',
-      source: pick.source,
-      destination: pick.destination,
-      protocol: pick.protocol,
-      port: pick.port,
-      country: pick.country,
-      description: pick.desc
-    };
-
-    setAlerts([newAlert, ...alerts]);
-    setRecentNotification(`🚨 INTRUSION DETECTED: ${newAlert.id} - ${newAlert.type}`);
-    setTimeout(() => setRecentNotification(null), 4000);
+  // Live SOC only: alerts originate from Wazuh, not browser-generated simulations.
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const liveAlerts = await getSocAlerts();
+      const mapAlert = (a: LiveSocAlert): Alert => ({
+        id: a.id, timestamp: a.timestamp, type: a.ruleName,
+        severity: a.severity === 'CRITICAL' ? 'critical' : a.severity === 'HIGH' ? 'high' : a.severity === 'MEDIUM' ? 'medium' : 'low',
+        status: 'open', source: a.sourceIp || a.endpoint, destination: a.destinationIp || '-', protocol: 'Wazuh',
+        port: 0, country: '-', description: a.ruleName
+      });
+      setAlerts(liveAlerts.map(mapAlert));
+      setRecentNotification('Live Wazuh alerts synchronized.');
+    } catch {
+      setSocConnected(false);
+      setRecentNotification('Wazuh is offline or the SOC backend is unavailable.');
+    } finally {
+      setIsRefreshing(false);
+      setTimeout(() => setRecentNotification(null), 3000);
+    }
   };
 
   const handleRefresh = () => {
@@ -198,7 +164,7 @@ export const SocSimulatorModal: React.FC<SocSimulatorModalProps> = ({ onClose })
     { id: 'endpoint-inspector', label: 'Endpoint Activities (IP)', icon: Laptop },
     { id: 'threat-intel', label: 'Threat Intel', icon: ShieldAlert },
     { id: 'alerts', label: 'Alerts & Events', icon: Bell, badge: alerts.filter(a => a.status === 'open').length },
-    { id: 'incidents', label: 'Incidents', icon: Flame, badge: 2 },
+    { id: 'incidents', label: 'Incidents', icon: Flame, badge: alerts.filter(a => a.status === 'open' && a.severity === 'critical').length },
     { id: 'network', label: 'Network Monitor', icon: Network },
     { id: 'vulnerabilities', label: 'Vulnerabilities', icon: Bug, badge: 5 },
     { id: 'reports', label: 'Reports', icon: FileBarChart2 },
@@ -251,17 +217,6 @@ export const SocSimulatorModal: React.FC<SocSimulatorModalProps> = ({ onClose })
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>{currentTime}</span>
             </div>
-
-            {/* Trigger Simulation */}
-            <button
-              type="button"
-              onClick={handleTriggerTelemetryEvent}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold text-slate-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(52,211,153,0.3)]"
-              title="Inject synthetic adversary attack into SIEM"
-            >
-              <Zap className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Trigger Telemetry Event</span>
-            </button>
 
             {/* Refresh */}
             <button
