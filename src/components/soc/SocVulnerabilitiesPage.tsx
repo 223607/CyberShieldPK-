@@ -21,13 +21,17 @@ import {
   getCvssColor,
   getSeverityBadgeStyle 
 } from '../../data/socDashboardData';
+import { getSocVulnerabilities } from '../../services/socApi';
 
 export const SocVulnerabilitiesPage: React.FC = () => {
   const [search, setSearch] = useState('');
+  const [liveVulnerabilities, setLiveVulnerabilities] = useState<any[] | null>(null);
+  useEffect(() => { getSocVulnerabilities().then(v => { if (v.length) setLiveVulnerabilities(v); }).catch(() => {}); }, []);
+  const displayedVulnerabilities = liveVulnerabilities || vulnerabilities;
   const [severityFilter, setSeverityFilter] = useState('all');
   const [patchFilter, setPatchFilter] = useState('all');
 
-  const filteredVulns = vulnerabilities.filter(v => {
+  const filteredVulns = displayedVulnerabilities.filter(v => {
     const matchSearch = search === '' || 
       v.cveId.toLowerCase().includes(search.toLowerCase()) || 
       v.description.toLowerCase().includes(search.toLowerCase()) || 
@@ -38,8 +42,8 @@ export const SocVulnerabilitiesPage: React.FC = () => {
     return matchSearch && matchSeverity && matchPatch;
   });
 
-  const completedCount = vulnerabilities.filter(v => v.patchStatus === 'completed').length;
-  const patchCoverage = Math.round((completedCount / vulnerabilities.length) * 100);
+  const completedCount = displayedVulnerabilities.filter(v => v.patchStatus === 'completed' || v.status === 'Resolved').length;
+  const patchCoverage = displayedVulnerabilities.length ? Math.round((completedCount / displayedVulnerabilities.length) * 100) : 0;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -48,14 +52,14 @@ export const SocVulnerabilitiesPage: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
           <p className="text-[11px] font-mono text-slate-400 uppercase">Identified CVEs</p>
-          <p className="text-2xl sm:text-3xl font-bold font-mono text-white mt-1">{vulnerabilities.length}</p>
+          <p className="text-2xl sm:text-3xl font-bold font-mono text-white mt-1">{displayedVulnerabilities.length}</p>
           <span className="text-[10px] font-mono text-slate-500">Known CVE catalog</span>
         </div>
 
         <div className="p-4 rounded-xl bg-slate-950/80 border border-red-500/30">
           <p className="text-[11px] font-mono text-slate-400 uppercase">Critical (CVSS 9.0+)</p>
           <p className="text-2xl sm:text-3xl font-bold font-mono text-red-400 mt-1">
-            {vulnerabilities.filter(v => v.severity === 'critical').length}
+            {displayedVulnerabilities.filter(v => v.severity === 'critical' || v.severity === 'Critical').length}
           </p>
           <span className="text-[10px] font-mono text-slate-500">Urgent patch window</span>
         </div>
@@ -69,7 +73,7 @@ export const SocVulnerabilitiesPage: React.FC = () => {
         <div className="p-4 rounded-xl bg-slate-950/80 border border-amber-500/30">
           <p className="text-[11px] font-mono text-slate-400 uppercase">Pending Deployment</p>
           <p className="text-2xl sm:text-3xl font-bold font-mono text-amber-400 mt-1">
-            {vulnerabilities.filter(v => v.patchStatus === 'pending').length}
+            {displayedVulnerabilities.filter(v => v.patchStatus === 'pending' || v.status === 'Unresolved').length}
           </p>
           <span className="text-[10px] font-mono text-slate-500">Scheduled maintenance</span>
         </div>
