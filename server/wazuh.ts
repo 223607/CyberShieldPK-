@@ -19,7 +19,7 @@ async function fetchHttps(url:string, init:RequestInit = {}, basic?:{user:string
   return new Promise<any>((resolve,reject)=>{
     const u=new URL(url);
     const req=https.request({hostname:u.hostname,port:u.port,path:u.pathname+u.search,method:init.method||"GET",headers:Object.fromEntries(headers.entries()),agent},res=>{
-      let body=""; res.on("data",c=>body+=c); res.on("end",()=>{if((res.statusCode||500)>=400) return reject(new Error("Wazuh request "+res.statusCode+": "+body.slice(0,500))); try{resolve(body?JSON.parse(body):{});}catch{resolve(body);}});
+      let body=""; res.on("data",c=>body+=c); res.on("end",()=>{if((res.statusCode||500)>=400)return reject(new Error("Wazuh request "+res.statusCode+": "+body.slice(0,500)));try{resolve(body?JSON.parse(body):{});}catch{resolve(body);}});
     });
     req.on("error",reject); if(init.body) req.write(init.body as string); req.end();
   });
@@ -33,43 +33,63 @@ async function getToken() {
   if(!token) throw new Error("Wazuh API did not return a JWT");
   return token;
 }
-export async function wazuhGet(path:string){
-  const jwt=await getToken();
-  return fetchHttps(API_URL+path,{headers:{Authorization:"Bearer "+jwt}});
+export async function wazuhGet(path:string){ const jwt=await getToken(); return fetchHttps(API_URL+path,{headers:{Authorization:"Bearer "+jwt}}); }
+export async function indexerGet(path:string){
+  if(!INDEXER_USER || !INDEXER_PASSWORD) throw new Error("WAZUH_INDEXER_USER/WAZUH_INDEXER_PASSWORD not configured");
+  return fetchHttps(INDEXER_URL+path,{}, {user:INDEXER_USER,password:INDEXER_PASSWORD});
 }
-export async function getAgents(){
-  const r=await wazuhGet("/agents?limit=1000&sort=-status,name");
-  return r?.data?.affected_items ?? [];
+export async function indexerSearch(index:string,body:any){
+  if(!INDEXER_USER || !INDEXER_PASSWORD) throw new Error("WAZUH_INDEXER_USER/WAZUH_INDEXER_PASSWORD not configured");
+  return fetchHttps(INDEXER_URL+"/"+index+"/_search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)},{user:INDEXER_USER,password:INDEXER_PASSWORD});
 }
+export async function getAgents(){ const r=await wazuhGet("/agents?limit=1000&sort=-status,name"); return r?.data?.affected_items ?? []; }
 export async function getManagerInfo(){ return wazuhGet("/manager/info"); }
+export async function getIndexerHealth(){ return indexerGet("/_cluster/health"); }
+
+function normalizeVulnerability(h:any){
+  const s=h?._source||{};
+  const cve=s.vulnerability?.id||s.vulnerability?.reference||s.cve||s.id||h?._id||"Unknown";
+  const score=Number(s.vulnerability?.score?.base||s.vulnerability?.cvss?.base_score||s.cvss?.score||s.score||0);
+  const severity=String(s.vulnerability?.severity||s.severity||"unknown").toLowerCase();
+  return {
+    id:String(h?._id||cve), cveId:String(cve), cvssScore:Number.isFinite(score)?score:0,
+    severity, description:String(s.vulnerability?.description||s.description||"Vulnerability detected by Wazuh"),
+    vendor:String(s.package?.vendor||s.vendor||s.software?.vendor||"Unknown"),
+    product:String(s.package?.name||s.product||s.software?.name||"Unknown"),
+    affectedAssets:[s.agent?.name||s.agent?.id||s.host?.name||"endpoint"].filter(Boolean),
+    patchStatus:String(s.vulnerability?.status||s.status||"Unresolved").toLowerCase().replace("resolved","completed").replace("unresolved","pending")
+  };
+}
 export async function getVulnerabilities(limit=100){
-  if(!INDEXER_USER || !INDEXER_PASSWORD) return [];
-  const body=JSON.stringify({size:limit,query:{match_all:{}}});
-  const r=await fetchHttps(INDEXER_URL+"/wazuh-states-vulnerabilities*/_search",{method:"POST",headers:{"Content-Type":"application/json"},body},{user:INDEXER_USER,password:INDEXER_PASSWORD});
-  return (r?.hits?.hits||[]).map((h:any)=>({id:h._id,index:h._index,...(h._source||{})}));
+  const r=await indexerSearch("wazuh-states-vulnerabilities-*",{size:Math.min(Math.max(limit,1),500),sort:[{"@timestamp":{"order":"desc","unmapped_type":"date"}}],query:{match_all:{}}});
+  return (r?.hits?.hits||[]).map(normalizeVulnerability);
+}
+export async function getHistoricalAlerts(limit=100){
+  const r=await indexerSearch("wazuh-alerts-*",{size:Math.min(Math.max(limit,1),500),sort:[{"timestamp":{"order":"desc","unmapped_type":"date"}}],query:{match_all:{}}});
+  return (r?.hits?.hits||[]).map((h:any)=>normalizeAlert(h?._source||{}));
 }
 export function tailAlerts(onAlert:(a:any)=>void){
   if(!fs.existsSync(ALERTS_FILE)) return ()=>{};
   let position=fs.statSync(ALERTS_FILE).size;
-  const timer=setInterval(()=>{
-    try{
-      const stat=fs.statSync(ALERTS_FILE);
-      if(stat.size<position) position=0;
-      if(stat.size===position) return;
-      const fd=fs.openSync(ALERTS_FILE,"r"); const buf=Buffer.alloc(stat.size-position);
-      fs.readSync(fd,buf,0,buf.length,position); fs.closeSync(fd); position=stat.size;
-      for(const line of buf.toString("utf8").split("\n")){if(!line.trim())continue;try{onAlert(JSON.parse(line));}catch{}}
-    }catch{}
-  },1000);
+  const timer=setInterval(()=>{try{
+    const stat=fs.statSync(ALERTS_FILE); if(stat.size<position)position=0; if(stat.size===position)return;
+    const fd=fs.openSync(ALERTS_FILE,"r"); const buf=Buffer.alloc(stat.size-position);
+    fs.readSync(fd,buf,0,buf.length,position); fs.closeSync(fd); position=stat.size;
+    for(const line of buf.toString("utf8").split("\n")){if(!line.trim())continue;try{onAlert(JSON.parse(line));}catch{}}
+  }catch{}},1000);
   return ()=>clearInterval(timer);
 }
 export function normalizeAlert(a:any){
   const level=Number(a?.rule?.level||0);
-  return {id:String(a?.id||a?.timestamp||Date.now()),timestamp:a?.timestamp||new Date().toISOString(),
+  const mitre=a?.rule?.mitre;
+  const techniques=mitre?.id||mitre?.technique||[];
+  return {
+    id:String(a?.id||a?.timestamp||Date.now()), timestamp:a?.timestamp||new Date().toISOString(),
     severity:level>=12?"CRITICAL":level>=9?"HIGH":level>=6?"MEDIUM":"LOW",
-    ruleId:String(a?.rule?.id||""),ruleName:a?.rule?.description||"Wazuh alert",
-    agentId:a?.agent?.id||"000",endpoint:a?.agent?.name||a?.agent?.ip||"manager",
+    ruleId:String(a?.rule?.id||""), ruleName:a?.rule?.description||"Wazuh alert",
+    agentId:String(a?.agent?.id||"000"), endpoint:a?.agent?.name||a?.agent?.ip||"manager",
     sourceIp:a?.data?.srcip||a?.srcip||a?.data?.win?.eventdata?.IpAddress||"",
-    destinationIp:a?.data?.dstip||"",mitreTechnique:a?.rule?.mitre?.id?.[0]||"",
-    status:"NEW",fullEvent:a};
+    destinationIp:a?.data?.dstip||a?.dstip||"", mitreTechnique:String(Array.isArray(techniques)?techniques[0]||"":techniques||""),
+    status:"NEW", fullEvent:a
+  };
 }
