@@ -141,15 +141,6 @@ export const SocSimulatorModal: React.FC<SocSimulatorModalProps> = ({ onClose })
     }
   };
 
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      setRecentNotification('All SIEM feeds synchronized with Wazuh & Suricata agents.');
-      setTimeout(() => setRecentNotification(null), 3000);
-    }, 800);
-  };
-
   interface NavTabItem {
     id: SocTab;
     label: string;
