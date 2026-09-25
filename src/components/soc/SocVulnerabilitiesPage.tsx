@@ -25,9 +25,9 @@ import { getSocVulnerabilities } from '../../services/socApi';
 
 export const SocVulnerabilitiesPage: React.FC = () => {
   const [search, setSearch] = useState('');
-  const [liveVulnerabilities, setLiveVulnerabilities] = useState<any[] | null>(null);
-  useEffect(() => { getSocVulnerabilities().then(v => { if (v.length) setLiveVulnerabilities(v); }).catch(() => {}); }, []);
-  const displayedVulnerabilities = liveVulnerabilities || vulnerabilities;
+  const [liveVulnerabilities, setLiveVulnerabilities] = useState<any[]>([]);
+  useEffect(() => { getSocVulnerabilities().then(v => setLiveVulnerabilities(v)).catch(() => setLiveVulnerabilities([])); }, []);
+  const displayedVulnerabilities = liveVulnerabilities;
   const [severityFilter, setSeverityFilter] = useState('all');
   const [patchFilter, setPatchFilter] = useState('all');
 
@@ -154,28 +154,28 @@ export const SocVulnerabilitiesPage: React.FC = () => {
 
         {/* Segmented Bar */}
         <div className="flex h-3 rounded-full overflow-hidden bg-slate-900 border border-slate-800">
-          <div className="bg-emerald-400 h-full transition-all" style={{ width: `${(vulnerabilities.filter(v => v.patchStatus === 'completed').length / vulnerabilities.length) * 100}%` }} title="Completed" />
-          <div className="bg-cyan-400 h-full transition-all" style={{ width: `${(vulnerabilities.filter(v => v.patchStatus === 'in_progress').length / vulnerabilities.length) * 100}%` }} title="In Progress" />
-          <div className="bg-amber-400 h-full transition-all" style={{ width: `${(vulnerabilities.filter(v => v.patchStatus === 'pending').length / vulnerabilities.length) * 100}%` }} title="Pending" />
-          <div className="bg-red-500 h-full transition-all" style={{ width: `${(vulnerabilities.filter(v => v.patchStatus === 'failed').length / vulnerabilities.length) * 100}%` }} title="Failed" />
+          <div className="bg-emerald-400 h-full transition-all" style={{ width: `${(displayedVulnerabilities.filter(v => v.patchStatus === 'completed').length / displayedVulnerabilities.length) * 100}%` }} title="Completed" />
+          <div className="bg-cyan-400 h-full transition-all" style={{ width: `${(displayedVulnerabilities.filter(v => v.patchStatus === 'in_progress').length / displayedVulnerabilities.length) * 100}%` }} title="In Progress" />
+          <div className="bg-amber-400 h-full transition-all" style={{ width: `${(displayedVulnerabilities.filter(v => v.patchStatus === 'pending').length / displayedVulnerabilities.length) * 100}%` }} title="Pending" />
+          <div className="bg-red-500 h-full transition-all" style={{ width: `${(displayedVulnerabilities.filter(v => v.patchStatus === 'failed').length / displayedVulnerabilities.length) * 100}%` }} title="Failed" />
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-[11px] font-mono text-slate-400 pt-1">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-            Completed: {vulnerabilities.filter(v => v.patchStatus === 'completed').length}
+            Completed: {displayedVulnerabilities.filter(v => v.patchStatus === 'completed').length}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
-            In Progress: {vulnerabilities.filter(v => v.patchStatus === 'in_progress').length}
+            In Progress: {displayedVulnerabilities.filter(v => v.patchStatus === 'in_progress').length}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-            Pending: {vulnerabilities.filter(v => v.patchStatus === 'pending').length}
+            Pending: {displayedVulnerabilities.filter(v => v.patchStatus === 'pending').length}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-            Failed: {vulnerabilities.filter(v => v.patchStatus === 'failed').length}
+            Failed: {displayedVulnerabilities.filter(v => v.patchStatus === 'failed').length}
           </span>
         </div>
       </div>
