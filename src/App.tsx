@@ -40,6 +40,7 @@ import { SocSimulatorSection } from './components/SocSimulatorSection';
 
 import { DOMAINS } from './data/domains';
 import { Course, Lab, Article, Project, SecurityService, ResourceItem, DomainInfo } from './types';
+import { supabase } from './lib/supabase';
 
 export default function App() {
   // Navigation & Modals State
@@ -65,15 +66,11 @@ export default function App() {
   const [certificateCourse, setCertificateCourse] = useState<Course | null>(null);
   const [showFallingStars, setShowFallingStars] = useState<boolean>(false);
 
-  // User & Learning State with local persistence and verified session check
+  // User & Learning State with local persistence and Supabase synchronization
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role?: string } | null>(() => {
     try {
-      const isVerified = localStorage.getItem('cybershield_verified_session') === 'true';
       const saved = localStorage.getItem('cybershield_user');
-      if (isVerified && saved) {
-        return JSON.parse(saved);
-      }
-      return null;
+      return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
     }
@@ -81,8 +78,6 @@ export default function App() {
 
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<string[]>(() => {
     try {
-      const isVerified = localStorage.getItem('cybershield_verified_session') === 'true';
-      if (!isVerified) return [];
       const saved = localStorage.getItem('cybershield_enrolled_courses');
       return saved ? JSON.parse(saved) : [];
     } catch {
@@ -92,8 +87,6 @@ export default function App() {
 
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>(() => {
     try {
-      const isVerified = localStorage.getItem('cybershield_verified_session') === 'true';
-      if (!isVerified) return [];
       const saved = localStorage.getItem('cybershield_completed_lessons');
       return saved ? JSON.parse(saved) : [];
     } catch {
@@ -118,6 +111,87 @@ export default function App() {
       return {};
     }
   });
+
+  // Sync Supabase Auth Session
+  useEffect(() => {
+    const syncUserSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          let displayName = session.user.user_metadata?.full_name || 
+                            session.user.user_metadata?.name || 
+                            session.user.email?.split('@')[0] || 
+                            'Student';
+          let role = session.user.user_metadata?.role || 'student';
+
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name, role')
+              .eq('id', session.user.id)
+              .maybeSingle();
+
+            if (profile?.full_name) displayName = profile.full_name;
+            if (profile?.role) role = profile.role;
+          } catch {
+            // Profile table query non-blocking
+          }
+
+          const userObj = {
+            name: displayName,
+            email: session.user.email || '',
+            role: role
+          };
+
+          setCurrentUser(userObj);
+          localStorage.setItem('cybershield_user', JSON.stringify(userObj));
+        }
+      } catch (err) {
+        console.error('Session retrieval error:', err);
+      }
+    };
+
+    syncUserSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        let displayName = session.user.user_metadata?.full_name || 
+                          session.user.user_metadata?.name || 
+                          session.user.email?.split('@')[0] || 
+                          'Student';
+        let role = session.user.user_metadata?.role || 'student';
+
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, role')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          if (profile?.full_name) displayName = profile.full_name;
+          if (profile?.role) role = profile.role;
+        } catch {
+          // ignore
+        }
+
+        const userObj = {
+          name: displayName,
+          email: session.user.email || '',
+          role: role
+        };
+
+        setCurrentUser(userObj);
+        localStorage.setItem('cybershield_user', JSON.stringify(userObj));
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+        localStorage.removeItem('cybershield_user');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Global Keyboard Shortcut (Cmd+K / Ctrl+K)
   useEffect(() => {
@@ -311,9 +385,13 @@ export default function App() {
     setActiveCourse(course);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
     localStorage.removeItem('cybershield_user');
-    localStorage.removeItem('cybershield_verified_session');
     localStorage.removeItem('cybershield_enrolled_courses');
     localStorage.removeItem('cybershield_completed_lessons');
     localStorage.removeItem('cybershield_completed_labs');
@@ -671,7 +749,7 @@ export default function App() {
         />
       )}
 
-      {/* Authentication & 6-Digit OTP Verification Modal */}
+      {/* Supabase Authentication Modal */}
       {authModalOpen && (
         <AuthModal
           targetCourse={pendingCourse}

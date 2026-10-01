@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { 
   X, 
   User, 
@@ -6,261 +6,329 @@ import {
   Mail, 
   ShieldCheck, 
   ArrowRight, 
-  Sparkles, 
-  KeyRound, 
   CheckCircle2, 
+  AlertCircle,
   RefreshCw,
-  AlertCircle
+  KeyRound
 } from 'lucide-react';
 import { Course } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface AuthModalProps {
   onClose: () => void;
   onLoginSuccess: (user: { name: string; email: string; role?: string }) => void;
   targetCourse?: Course | null;
+  initialMode?: 'signin' | 'signup';
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   onLoginSuccess,
-  targetCourse
+  targetCourse,
+  initialMode = 'signin'
 }) => {
-  const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot' | 'verify-notice'>('signin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   
-  // 6-digit OTP state
-  const [generatedOtp, setGeneratedOtp] = useState<string>('849201');
-  const [digits, setDigits] = useState<string[]>(['', '', '', '', '', '']);
-  const [otpError, setOtpError] = useState<string | null>(null);
-  const [resendTimer, setResendTimer] = useState<number>(45);
-  const [resendNotified, setResendNotified] = useState<boolean>(false);
-  const [showInboxPreview, setShowInboxPreview] = useState<boolean>(true);
-  const [copiedCode, setCopiedCode] = useState<boolean>(false);
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // Resend verification cooldown
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
 
-  // Generate a random 6 digit code sent behind the scenes
-  const generateNewOtp = () => {
-    const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(randomCode);
-    setDigits(['', '', '', '', '', '']);
-    setOtpError(null);
-    setResendTimer(45);
-    setResendNotified(true);
-    setShowInboxPreview(true);
-    setTimeout(() => setResendNotified(false), 4000);
+  // Friendly error formatter
+  const formatAuthError = (err: any): string => {
+    if (!err) return 'An unexpected error occurred. Please try again.';
+    const msg = typeof err === 'string' ? err : err.message || '';
+    
+    if (msg.toLowerCase().includes('email not confirmed')) {
+      return 'Your email has not been verified yet. Please check your inbox for the confirmation link.';
+    }
+    if (msg.toLowerCase().includes('invalid login credentials')) {
+      return 'Incorrect email or password. Please try again.';
+    }
+    if (msg.toLowerCase().includes('user already registered')) {
+      return 'An account with this email already exists. Please log in.';
+    }
+    if (msg.toLowerCase().includes('password should be at least')) {
+      return 'Password must be at least 6 characters.';
+    }
+    if (msg.toLowerCase().includes('network') || msg.toLowerCase().includes('fetch')) {
+      return 'Connection error. Please check your internet connection.';
+    }
+    return msg;
   };
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (step === 'otp' && resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [step, resendTimer]);
-
-  const handleCredentialsSubmit = (e: React.FormEvent) => {
+  // LOGIN HANDLER
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    setErrorMessage(null);
+    setSuccessMessage(null);
 
-    // Proceed to Step 2: 6-digit OTP verification sent to email
-    generateNewOtp();
-    setStep('otp');
-    setTimeout(() => {
-      inputRefs.current[0]?.focus();
-    }, 100);
-  };
-
-  const handleDigitChange = (index: number, val: string) => {
-    // Only accept numeric
-    const clean = val.replace(/[^0-9]/g, '');
-    if (!clean && val !== '') return;
-
-    const newDigits = [...digits];
-    newDigits[index] = clean ? clean[clean.length - 1] : '';
-    setDigits(newDigits);
-    setOtpError(null);
-
-    // Auto advance to next input
-    if (clean && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !digits[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
-    if (!pasted) return;
-
-    const newDigits = ['', '', '', '', '', ''];
-    for (let i = 0; i < pasted.length; i++) {
-      newDigits[i] = pasted[i];
-    }
-    setDigits(newDigits);
-    setOtpError(null);
-    if (pasted.length === 6) {
-      inputRefs.current[5]?.focus();
-    } else {
-      inputRefs.current[pasted.length]?.focus();
-    }
-  };
-
-  const handleAutoFillCode = () => {
-    setDigits(generatedOtp.split(''));
-    setOtpError(null);
-  };
-
-  const handleCopyCode = () => {
-    navigator.clipboard?.writeText(generatedOtp);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
-  };
-
-  const handleVerifyOtp = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const enteredCode = digits.join('');
-    if (enteredCode.length < 6) {
-      setOtpError('Please enter all 6 digits of the verification code.');
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
+      setErrorMessage('Please enter both your email and password.');
       return;
     }
 
-    // STRICT OTP VALIDATION: Reject any random or non-matching code!
-    if (enteredCode !== generatedOtp) {
-      setOtpError(`Authentication failed: Code "${enteredCode}" is invalid! You must enter the exact 6-digit code (${generatedOtp}) sent to ${email}.`);
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: password,
+      });
+
+      if (error) {
+        if (error.message.toLowerCase().includes('email not confirmed')) {
+          setMode('verify-notice');
+          setLoading(false);
+          return;
+        }
+        setErrorMessage(formatAuthError(error));
+        setLoading(false);
+        return;
+      }
+
+      if (data?.user) {
+        let displayName = data.user.user_metadata?.full_name || 
+                          data.user.user_metadata?.name || 
+                          cleanEmail.split('@')[0];
+        let role = data.user.user_metadata?.role || 'student';
+
+        // Fetch custom profile if present
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, role')
+            .eq('id', data.user.id)
+            .maybeSingle();
+
+          if (profile?.full_name) displayName = profile.full_name;
+          if (profile?.role) role = profile.role;
+        } catch {
+          // Non-blocking fallback
+        }
+
+        const authUser = {
+          name: displayName,
+          email: data.user.email || cleanEmail,
+          role: role
+        };
+
+        localStorage.setItem('cybershield_user', JSON.stringify(authUser));
+        onLoginSuccess(authUser);
+        onClose();
+      }
+    } catch (err: any) {
+      setErrorMessage(formatAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // SIGNUP HANDLER
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+
+    if (!cleanName) {
+      setErrorMessage('Please enter your full name.');
+      return;
+    }
+    if (!cleanEmail) {
+      setErrorMessage('Please enter a valid email address.');
+      return;
+    }
+    if (password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.');
       return;
     }
 
-    // Verified Successfully
-    const userObj = {
-      name: name.trim() || email.split('@')[0] || 'Muhammad Zaib Zafar',
-      email: email.trim() || 'zaibzafar936@gmail.com',
-      role: 'Verified Security Fellow'
-    };
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password: password,
+        options: {
+          data: {
+            full_name: cleanName,
+            name: cleanName,
+            role: 'student',
+          },
+        },
+      });
 
-    localStorage.setItem('cybershield_user', JSON.stringify(userObj));
-    localStorage.setItem('cybershield_verified_session', 'true');
-    onLoginSuccess(userObj);
-    onClose();
+      if (error) {
+        setErrorMessage(formatAuthError(error));
+        setLoading(false);
+        return;
+      }
+
+      // If user profile record can be stored
+      if (data?.user) {
+        try {
+          await supabase.from('profiles').upsert({
+            id: data.user.id,
+            full_name: cleanName,
+            email: cleanEmail,
+            role: 'student',
+          });
+        } catch {
+          // Handled gracefully if profiles table is not yet migrated
+        }
+      }
+
+      // If session is immediately returned (email confirmation disabled in Supabase project)
+      if (data?.session && data.user) {
+        const authUser = {
+          name: cleanName,
+          email: cleanEmail,
+          role: 'student'
+        };
+        localStorage.setItem('cybershield_user', JSON.stringify(authUser));
+        onLoginSuccess(authUser);
+        onClose();
+        return;
+      }
+
+      // Otherwise show real Email Verification Notice screen
+      setMode('verify-notice');
+    } catch (err: any) {
+      setErrorMessage(formatAuthError(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleQuickDemoLogin = () => {
-    const demoUser = {
-      name: 'Muhammad Zaib Zafar',
-      email: 'zaibzafar936@gmail.com',
-      role: 'Verified Security Fellow'
-    };
-    localStorage.setItem('cybershield_user', JSON.stringify(demoUser));
-    localStorage.setItem('cybershield_verified_session', 'true');
-    onLoginSuccess(demoUser);
-    onClose();
+  // FORGOT PASSWORD HANDLER
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setErrorMessage('Please enter your email address.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: window.location.origin,
+      });
+
+      if (error) {
+        setErrorMessage(formatAuthError(error));
+      } else {
+        setSuccessMessage('We sent a password reset link to your email.');
+      }
+    } catch (err: any) {
+      setErrorMessage(formatAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // RESEND VERIFICATION EMAIL
+  const handleResendVerification = async () => {
+    if (resendCooldown > 0) return;
+    setResendStatus(null);
+    setErrorMessage(null);
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setErrorMessage('Please enter your email address.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: cleanEmail,
+      });
+
+      if (error) {
+        setErrorMessage(formatAuthError(error));
+      } else {
+        setResendStatus('Verification email sent! Please check your inbox.');
+        setResendCooldown(60);
+        const timer = setInterval(() => {
+          setResendCooldown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    } catch (err: any) {
+      setErrorMessage(formatAuthError(err));
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-      <div className="bg-[#091120] border border-cyan-500/40 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
+      <div className="bg-[#091120] border border-cyan-500/30 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between">
+        <div className="px-6 py-4 bg-slate-950/80 border-b border-slate-800/80 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-cyan-400" />
-            <div>
-              <span className="font-bold text-white text-sm font-mono tracking-tight">
-                CYBERSHIELD<span className="text-cyan-400">PK</span> AUTH
-              </span>
-              {targetCourse && (
-                <div className="text-[10px] font-mono text-cyan-300">
-                  Lecture Access Verification
-                </div>
-              )}
-            </div>
+            <span className="font-bold text-white text-sm font-mono tracking-tight">
+              CYBERSHIELD<span className="text-cyan-400">PK</span>
+            </span>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {targetCourse && (
-          <div className="px-6 py-2.5 bg-cyan-950/40 border-b border-cyan-500/20 flex items-center gap-2">
+        {targetCourse && mode !== 'verify-notice' && (
+          <div className="px-6 py-2.5 bg-cyan-950/30 border-b border-cyan-500/20 flex items-center gap-2">
             <KeyRound className="w-4 h-4 text-cyan-400 flex-shrink-0" />
             <p className="text-xs text-cyan-200 font-mono truncate">
-              Verifying access for: <span className="font-bold text-white">{targetCourse.title}</span>
+              Accessing: <span className="font-semibold text-white">{targetCourse.title}</span>
             </p>
           </div>
         )}
 
-        {/* STEP 1: CREDENTIALS (LOGIN / SIGN UP) */}
-        {step === 'credentials' && (
-          <div className="overflow-y-auto p-6 space-y-4">
-            {/* Clear Login vs Sign Up tabs */}
-            <div className="grid grid-cols-2 p-1 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono">
-              <button
-                type="button"
-                onClick={() => setMode('signin')}
-                className={`py-2 px-3 rounded-lg text-center transition-all cursor-pointer font-semibold ${
-                  mode === 'signin'
-                    ? 'text-white bg-cyan-500/20 border border-cyan-500/50 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Log In
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('signup')}
-                className={`py-2 px-3 rounded-lg text-center transition-all cursor-pointer font-semibold ${
-                  mode === 'signup'
-                    ? 'text-white bg-cyan-500/20 border border-cyan-500/50 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Create Account (Sign Up)
-              </button>
+        {/* 1. LOGIN FORM */}
+        {mode === 'signin' && (
+          <div className="p-6 space-y-4">
+            <div>
+              <h2 className="text-xl font-bold text-white font-mono">Welcome Back</h2>
             </div>
 
-            <div className="text-xs text-slate-300 leading-relaxed">
-              {mode === 'signin' ? (
-                <span>Welcome back! Enter your login credentials below. A 6-digit verification code will be sent to your email to verify your session.</span>
-              ) : (
-                <span>Create your free CyberShield learner account. We will send a 6-digit confirmation code to your email inbox to verify your enrollment.</span>
-              )}
-            </div>
+            {errorMessage && (
+              <div className="p-3 rounded-xl bg-red-950/50 border border-red-500/40 text-red-300 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
-            <form onSubmit={handleCredentialsSubmit} className="space-y-3.5">
-              {mode === 'signup' && (
-                <div>
-                  <label className="block text-xs font-mono text-slate-300 mb-1">
-                    Full Legal Name (for Certificates)
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. Muhammad Zaib Zafar"
-                      className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
-                    />
-                  </div>
-                </div>
-              )}
-
+            <form onSubmit={handleLogin} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1">
-                  Email Address (Verification Code will be sent here)
+                  Email
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -270,7 +338,123 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                    autoComplete="email"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-mono text-slate-300">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setErrorMessage(null);
+                      setSuccessMessage(null);
+                      setMode('forgot');
+                    }}
+                    className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 cursor-pointer"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    autoComplete="current-password"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 px-4 rounded-xl font-mono text-xs font-semibold text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-400 hover:from-cyan-300 hover:to-sky-300 transition-all cursor-pointer flex items-center justify-center gap-2 mt-4 shadow-md disabled:opacity-50"
+              >
+                {loading ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <span>Login</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+
+              <div className="text-center pt-2">
+                <span className="text-xs text-slate-400 font-mono">Don't have an account? </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMessage(null);
+                    setSuccessMessage(null);
+                    setMode('signup');
+                  }}
+                  className="text-xs text-cyan-400 hover:text-cyan-300 font-mono font-semibold cursor-pointer underline"
+                >
+                  Create Account
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* 2. CREATE ACCOUNT FORM */}
+        {mode === 'signup' && (
+          <div className="p-6 space-y-4">
+            <div>
+              <h2 className="text-xl font-bold text-white font-mono">Create Account</h2>
+            </div>
+
+            {errorMessage && (
+              <div className="p-3 rounded-xl bg-red-950/50 border border-red-500/40 text-red-300 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSignUp} className="space-y-3">
+              <div>
+                <label className="block text-xs font-mono text-slate-300 mb-1">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Your Full Name"
+                    autoComplete="name"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-slate-300 mb-1">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    autoComplete="email"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
                   />
                 </div>
               </div>
@@ -287,197 +471,206 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                    autoComplete="new-password"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-slate-300 mb-1">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    autoComplete="new-password"
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-2.5 px-4 rounded-xl font-mono text-xs font-semibold text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-400 hover:from-cyan-300 hover:to-sky-300 transition-all cursor-pointer flex items-center justify-center gap-2 mt-2 shadow-md"
+                disabled={loading}
+                className="w-full py-2.5 px-4 rounded-xl font-mono text-xs font-semibold text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-400 hover:from-cyan-300 hover:to-sky-300 transition-all cursor-pointer flex items-center justify-center gap-2 mt-4 shadow-md disabled:opacity-50"
               >
-                <span>{mode === 'signin' ? 'Log In & Send 6-Digit Code' : 'Create Account & Send 6-Digit Code'}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                {loading ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <span>Create Account</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
               </button>
 
-              <div className="text-center pt-1">
+              <div className="text-center pt-2">
+                <span className="text-xs text-slate-400 font-mono">Already have an account? </span>
                 <button
                   type="button"
-                  onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-                  className="text-xs text-cyan-400 hover:text-cyan-300 font-mono cursor-pointer"
+                  onClick={() => {
+                    setErrorMessage(null);
+                    setSuccessMessage(null);
+                    setMode('signin');
+                  }}
+                  className="text-xs text-cyan-400 hover:text-cyan-300 font-mono font-semibold cursor-pointer underline"
                 >
-                  {mode === 'signin' ? "Don't have an account yet? Create Account (Sign Up)" : "Already have an account? Log In here"}
+                  Login
                 </button>
               </div>
             </form>
+          </div>
+        )}
 
-            {/* Instant Demo Account Verification */}
-            <div className="pt-3 border-t border-slate-800 text-center">
+        {/* 3. EMAIL VERIFICATION SCREEN */}
+        {mode === 'verify-notice' && (
+          <div className="p-6 space-y-5 text-center">
+            <div className="w-12 h-12 rounded-full bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center mx-auto text-cyan-400">
+              <Mail className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold text-white font-mono">Check Your Email</h2>
+              <p className="text-xs text-slate-300 leading-relaxed max-w-xs mx-auto">
+                We sent a verification email to your email address:
+              </p>
+              <div className="text-xs font-mono font-semibold text-cyan-300 bg-slate-950 py-2 px-3 rounded-lg border border-slate-800 break-all">
+                {email || 'your email address'}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Click the confirmation link inside the email to complete your registration.
+              </p>
+            </div>
+
+            {resendStatus && (
+              <div className="p-2.5 rounded-lg bg-emerald-950/50 border border-emerald-500/30 text-emerald-300 text-xs font-mono flex items-center justify-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>{resendStatus}</span>
+              </div>
+            )}
+
+            {errorMessage && (
+              <div className="p-2.5 rounded-lg bg-red-950/50 border border-red-500/30 text-red-300 text-xs font-mono">
+                {errorMessage}
+              </div>
+            )}
+
+            <div className="space-y-2.5 pt-2">
               <button
                 type="button"
-                onClick={handleQuickDemoLogin}
-                className="w-full py-2 px-3 rounded-lg text-xs font-mono text-cyan-300 bg-cyan-950/40 hover:bg-cyan-900/40 border border-cyan-500/30 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                onClick={handleResendVerification}
+                disabled={resendCooldown > 0}
+                className="w-full py-2.5 px-4 rounded-xl font-mono text-xs font-semibold text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-400 hover:from-cyan-300 hover:to-sky-300 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60 shadow-md"
               >
-                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Instant Verified Sign-In (Zaib Zafar)</span>
+                <RefreshCw className={`w-3.5 h-3.5 ${resendCooldown > 0 ? 'animate-spin' : ''}`} />
+                <span>{resendCooldown > 0 ? `Resend Email in ${resendCooldown}s` : 'Resend Email'}</span>
               </button>
-              <p className="text-[10px] text-slate-500 font-mono mt-1.5">
-                Bypasses steps for rapid platform evaluation
-              </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMessage(null);
+                  setSuccessMessage(null);
+                  setMode('signin');
+                }}
+                className="w-full py-2 px-4 rounded-xl font-mono text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                Back to Login
+              </button>
             </div>
           </div>
         )}
 
-        {/* STEP 2: 6-DIGIT CODE VERIFICATION (SENT TO EMAIL - NOT SHOWN ON SCREEN) */}
-        {step === 'otp' && (
-          <div className="overflow-y-auto p-6 space-y-4">
-            {/* Email Dispatch Notice - Does NOT show the code on screen */}
-            <div className="p-3.5 rounded-xl bg-slate-950 border border-cyan-500/30 flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-cyan-950 text-cyan-400 border border-cyan-500/30 flex-shrink-0">
-                <Mail className="w-4 h-4" />
-              </div>
-              <div className="text-xs">
-                <div className="font-bold text-white flex items-center justify-between">
-                  <span>Verification Code Dispatched</span>
-                  <span className="text-[10px] text-cyan-400 font-mono">Email Sent</span>
-                </div>
-                <p className="text-slate-300 mt-1 leading-relaxed">
-                  We have sent a 6-digit verification code to <span className="font-semibold text-cyan-300">{email}</span>. Please check your inbox or spam folder.
-                </p>
-                {resendNotified && (
-                  <p className="text-emerald-400 mt-1 font-mono text-[11px] animate-in fade-in">
-                    ✓ A fresh 6-digit code has been resent to your email.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="text-center space-y-1">
-              <h3 className="text-base font-bold text-white font-mono">
-                Enter 6-Digit Code From Your Email
-              </h3>
-              <p className="text-xs text-slate-400 font-mono">
-                Check incoming mail for: <span className="text-white font-semibold">{email}</span>
+        {/* 4. FORGOT PASSWORD FORM */}
+        {mode === 'forgot' && (
+          <div className="p-6 space-y-4">
+            <div>
+              <h2 className="text-xl font-bold text-white font-mono">Reset Password</h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Enter your email address to receive a password reset link.
               </p>
             </div>
 
-            {/* Simulated Live Webmail Inbox Drawer (Solves "otp email pr nhi aa rhi") */}
-            <div className="rounded-xl border border-cyan-500/40 bg-[#06101f] overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowInboxPreview(!showInboxPreview)}
-                className="w-full px-3.5 py-2.5 bg-cyan-950/50 hover:bg-cyan-900/50 text-left flex items-center justify-between text-xs font-mono text-cyan-300 border-b border-cyan-500/30 cursor-pointer"
-              >
-                <span className="flex items-center gap-2 font-bold">
-                  <Mail className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Incoming Email Preview (1 Unread from CyberShield)</span>
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                  {showInboxPreview ? 'Hide Email' : 'Open Email'}
-                </span>
-              </button>
-
-              {showInboxPreview && (
-                <div className="p-3.5 space-y-2.5 text-xs text-slate-300 font-mono bg-slate-950/90">
-                  <div className="text-[11px] text-slate-400 border-b border-slate-800 pb-2 space-y-0.5">
-                    <div><span className="text-slate-500">From:</span> CyberShield Security &lt;auth-dispatch@cybershield.pk&gt;</div>
-                    <div><span className="text-slate-500">To:</span> {email || 'zaibzafar936@gmail.com'}</div>
-                    <div><span className="text-slate-500">Subject:</span> [CyberShield Security] Your 6-Digit Course Verification Passcode</div>
-                  </div>
-
-                  <p className="text-slate-300 leading-relaxed text-xs">
-                    Your single-use 6-digit authentication passcode for accessing cybersecurity course modules is:
-                  </p>
-
-                  <div className="py-1 text-center">
-                    <span className="inline-block px-4 py-2 rounded-xl bg-cyan-950/90 border border-cyan-400 text-cyan-300 font-mono text-2xl font-extrabold tracking-widest shadow-[0_0_15px_rgba(34,211,238,0.25)] select-all">
-                      {generatedOtp}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1 text-[11px] border-t border-slate-800">
-                    <button
-                      type="button"
-                      onClick={handleCopyCode}
-                      className="text-slate-400 hover:text-white cursor-pointer flex items-center gap-1"
-                    >
-                      <span>{copiedCode ? '✓ Copied to clipboard!' : 'Copy Code'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleAutoFillCode}
-                      className="text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer underline"
-                    >
-                      Auto-fill into boxes below →
-                    </button>
-                  </div>
+            {successMessage ? (
+              <div className="space-y-4 text-center py-2">
+                <div className="p-3.5 rounded-xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 text-xs flex items-start gap-2 text-left">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <span>{successMessage}</span>
                 </div>
-              )}
-            </div>
-
-            {/* 6 Digit Input Boxes */}
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div className="flex items-center justify-center gap-2 sm:gap-2.5">
-                {digits.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    ref={(el) => (inputRefs.current[idx] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleDigitChange(idx, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(idx, e)}
-                    onPaste={handlePaste}
-                    placeholder="•"
-                    className={`w-11 h-13 sm:w-12 sm:h-14 text-center text-xl font-bold font-mono rounded-xl bg-slate-950 border transition-all focus:outline-none ${
-                      digit
-                        ? 'border-cyan-400 text-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.25)]'
-                        : 'border-slate-800 text-white focus:border-cyan-500'
-                    }`}
-                  />
-                ))}
-              </div>
-
-              {otpError && (
-                <div className="p-2.5 rounded-lg bg-red-950/60 border border-red-500/40 text-red-300 text-xs font-mono flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                  <span>{otpError}</span>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="w-full py-3 px-4 rounded-xl font-mono text-xs font-bold text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-400 hover:from-cyan-300 hover:to-sky-300 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Verify Code & Start Course</span>
-              </button>
-
-              <div className="flex items-center justify-between text-xs font-mono pt-1">
                 <button
                   type="button"
-                  onClick={() => setStep('credentials')}
-                  className="text-slate-400 hover:text-white cursor-pointer"
+                  onClick={() => {
+                    setSuccessMessage(null);
+                    setMode('signin');
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl font-mono text-xs font-semibold text-slate-950 bg-cyan-400 hover:bg-cyan-300 transition-colors cursor-pointer"
                 >
-                  ← Change Email
-                </button>
-
-                <button
-                  type="button"
-                  onClick={generateNewOtp}
-                  disabled={resendTimer > 0}
-                  className={`flex items-center gap-1 cursor-pointer ${
-                    resendTimer > 0 
-                      ? 'text-slate-500 cursor-not-allowed' 
-                      : 'text-cyan-400 hover:text-cyan-300'
-                  }`}
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${resendTimer === 0 ? 'animate-spin' : ''}`} />
-                  <span>{resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend Code to Email'}</span>
+                  Back to Login
                 </button>
               </div>
-            </form>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-3.5">
+                {errorMessage && (
+                  <div className="p-3 rounded-xl bg-red-950/50 border border-red-500/40 text-red-300 text-xs flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-mono text-slate-300 mb-1">
+                    Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      autoComplete="email"
+                      className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-2.5 px-4 rounded-xl font-mono text-xs font-semibold text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-400 hover:from-cyan-300 hover:to-sky-300 transition-all cursor-pointer flex items-center justify-center gap-2 mt-4 shadow-md disabled:opacity-50"
+                >
+                  {loading ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <span>Send Reset Link</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </button>
+
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setErrorMessage(null);
+                      setSuccessMessage(null);
+                      setMode('signin');
+                    }}
+                    className="text-xs text-slate-400 hover:text-white font-mono cursor-pointer"
+                  >
+                    Back to Login
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         )}
       </div>

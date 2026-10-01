@@ -39,12 +39,14 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
   onClose,
   onEnrollSuccess
 }) => {
-  const selectedCourse = courseId ? COURSES.find(c => c.id === courseId) : COURSES[0];
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(courseId || COURSES[0].id);
+  const selectedCourse = COURSES.find(c => c.id === selectedCourseId) || COURSES[0];
   
   // Checkout states
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('card');
   const [promoCode, setPromoCode] = useState('');
   const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
   const [promoMessage, setPromoMessage] = useState<string | null>(null);
 
   // Card details (clean by default for strict validation check)
@@ -67,31 +69,50 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
   const [processingStep, setProcessingStep] = useState<string>('');
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [transactionId, setTransactionId] = useState('');
+  const [paymentTimestamp, setPaymentTimestamp] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
   if (!selectedCourse) return null;
 
   // Price calculations
   const originalPKR = selectedCourse.pricePKR;
-  const discountAmount = Math.round((originalPKR * discountPercent) / 100);
-  const finalPricePKR = Math.max(0, originalPKR - discountAmount);
-  const finalPriceUSD = Math.max(0, Math.round(selectedCourse.priceUSD * (1 - discountPercent / 100)));
+  const originalUSD = selectedCourse.priceUSD;
+  const discountAmountPKR = Math.round((originalPKR * discountPercent) / 100);
+  const discountAmountUSD = Math.round((originalUSD * discountPercent) / 100);
+  // Tax / Fees: 0% / Waived for students via education grant
+  const taxFeesPKR = 0;
+  const taxFeesUSD = 0;
+  const finalPricePKR = Math.max(0, originalPKR - discountAmountPKR + taxFeesPKR);
+  const finalPriceUSD = Math.max(0, originalUSD - discountAmountUSD + taxFeesUSD);
 
-  const handleApplyPromo = (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = promoCode.trim().toUpperCase();
+  const applyCode = (codeToApply: string) => {
+    const code = codeToApply.trim().toUpperCase();
     if (code === 'CYBERSHIELD20' || code === 'FELLOW20' || code === 'ZAIB20') {
       setDiscountPercent(20);
+      setAppliedPromoCode(code);
       setPromoMessage('✓ 20% Security Fellowship Discount Applied!');
       setFormError(null);
     } else if (code === 'STUDENT50') {
       setDiscountPercent(50);
+      setAppliedPromoCode(code);
       setPromoMessage('✓ 50% Verified Student Scholarship Applied!');
       setFormError(null);
     } else {
       setPromoMessage(null);
       setFormError('Invalid coupon code. Try "CYBERSHIELD20" or "STUDENT50"');
     }
+  };
+
+  const handleApplyPromo = (e: React.FormEvent) => {
+    e.preventDefault();
+    applyCode(promoCode);
+  };
+
+  const removeDiscount = () => {
+    setDiscountPercent(0);
+    setAppliedPromoCode(null);
+    setPromoMessage(null);
+    setPromoCode('');
   };
 
   const handleFillTestCard = (testCard: typeof TEST_CARDS[0]) => {
@@ -143,12 +164,20 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
     setTimeout(() => {
       const generatedTx = 'CS-PAY-' + Math.floor(100000 + Math.random() * 900000);
       setTransactionId(generatedTx);
+      setPaymentTimestamp(new Date().toLocaleString('en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+      }));
       setIsProcessing(false);
       setPaymentSuccess(true);
       
       // Permanently mark course as enrolled & paid in persistence
       onEnrollSuccess(selectedCourse.id);
     }, 2700);
+  };
+
+  const handlePrintReceipt = () => {
+    window.print();
   };
 
   return (
@@ -183,58 +212,122 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
           {paymentSuccess ? (
             /* PAYMENT RECEIPT & SUCCESS VIEW */
-            <div className="space-y-5 text-center py-4 animate-in fade-in zoom-in-95">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto text-emerald-400">
+            <div className="space-y-5 text-center py-2 animate-in fade-in zoom-in-95">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto text-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.3)]">
                 <CheckCircle2 className="w-9 h-9" />
               </div>
 
               <div>
-                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">
-                  Payment Approved & Verified
+                <span className="text-[10px] font-mono uppercase px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">
+                  Payment Approved & Authenticated
                 </span>
                 <h4 className="text-xl font-bold text-white mt-2">
-                  Official Course Enrollment Activated
+                  Official Course Enrollment Confirmed
                 </h4>
                 <p className="text-xs text-slate-300 max-w-md mx-auto mt-1">
-                  Thank you! Your payment has been confirmed. Full lifetime access to all course modules, labs, and certification exams is now unlocked.
+                  Your payment has been successfully cleared. Full lifetime access to lectures, virtual lab containers, playbooks, and accreditation certificate is now active.
                 </p>
               </div>
 
-              {/* Official Electronic Receipt */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-left font-mono text-xs space-y-3 max-w-lg mx-auto">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-slate-400">
-                  <span>Transaction ID:</span>
-                  <span className="text-cyan-400 font-bold">{transactionId}</span>
+              {/* Official Itemized Electronic Invoice & Receipt */}
+              <div className="rounded-xl bg-slate-950 border border-slate-800 text-left font-mono overflow-hidden max-w-xl mx-auto shadow-2xl">
+                <div className="p-3.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <FileCheck2 className="w-4 h-4 text-cyan-400" />
+                    <span className="font-bold text-white uppercase tracking-wider">Official Invoice & Receipt</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    {paymentTimestamp || new Date().toLocaleDateString()}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-slate-300">
-                  <span>Course Enrolled:</span>
-                  <span className="text-white font-bold truncate max-w-[240px]">{selectedCourse.title}</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-300">
-                  <span>Payment Channel:</span>
-                  <span className="text-white uppercase">
-                    {selectedMethod === 'card' ? 'Visa / MasterCard' : selectedMethod === 'mobile_wallet' ? walletProvider.toUpperCase() : 'Meezan Bank Wire'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-slate-300">
-                  <span>Amount Paid:</span>
-                  <span className="text-emerald-400 font-bold">
-                    PKR {finalPricePKR.toLocaleString()} ({finalPriceUSD} USD)
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-slate-400 pt-1 border-t border-slate-800 text-[11px]">
-                  <span>Status:</span>
-                  <span className="text-emerald-400 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> Paid & Settled
-                  </span>
+
+                <div className="p-4 space-y-3 text-xs">
+                  <div className="grid grid-cols-2 gap-2 pb-3 border-b border-slate-800/80 text-[11px]">
+                    <div>
+                      <span className="text-slate-400 block">Transaction Reference:</span>
+                      <span className="text-cyan-400 font-bold">{transactionId}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block">Payment Method:</span>
+                      <span className="text-white font-medium uppercase">
+                        {selectedMethod === 'card' ? 'Visa / MasterCard' : selectedMethod === 'mobile_wallet' ? walletProvider.toUpperCase() : 'Meezan Bank Wire'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 5-ITEM ITEMIZED BREAKDOWN: Course, Price, Discount, Tax / Fees, Total */}
+                  <div className="space-y-2.5 pt-1">
+                    <div className="flex items-start justify-between gap-4 py-1.5 border-b border-slate-800/60">
+                      <div>
+                        <span className="text-slate-400 block text-[11px] uppercase tracking-wider">Course:</span>
+                        <span className="text-white font-bold text-sm block">{selectedCourse.title}</span>
+                        <span className="text-[10px] text-cyan-300/80">
+                          {selectedCourse.category} • {selectedCourse.modulesCount} Chapters • Lifetime License
+                        </span>
+                      </div>
+                      <div className="text-right text-slate-300 flex-shrink-0 text-xs font-semibold">
+                        PKR {originalPKR.toLocaleString()}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-slate-300 text-xs py-1 border-b border-slate-800/60">
+                      <span className="text-slate-400">Price:</span>
+                      <span className="text-white font-mono font-medium">
+                        PKR {originalPKR.toLocaleString()} <span className="text-slate-400 text-[11px]">(${originalUSD} USD)</span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs py-1 border-b border-slate-800/60">
+                      <span className="text-slate-400">
+                        Discount {appliedPromoCode ? `(${appliedPromoCode} - ${discountPercent}%)` : ''}:
+                      </span>
+                      <span className={discountAmountPKR > 0 ? "text-emerald-400 font-bold font-mono" : "text-slate-400 font-mono"}>
+                        {discountAmountPKR > 0 ? `-PKR ${discountAmountPKR.toLocaleString()} (-$${discountAmountUSD} USD)` : 'PKR 0 (0%)'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs py-1 border-b border-slate-800/60">
+                      <div className="flex items-center gap-1.5 text-slate-400">
+                        <span>Tax / Fees:</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-500/30">
+                          100% Subsidized
+                        </span>
+                      </div>
+                      <span className="text-slate-300 font-mono">
+                        PKR 0.00 <span className="text-slate-500 text-[11px]">($0.00 USD)</span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 text-sm font-bold">
+                      <span className="text-cyan-400 uppercase tracking-wider">Total:</span>
+                      <span className="text-emerald-400 text-base font-extrabold font-mono">
+                        PKR {finalPricePKR.toLocaleString()} <span className="text-xs text-slate-300 font-normal">(${finalPriceUSD} USD)</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800">
+                    <span>Enrollment State:</span>
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Verified & Active
+                    </span>
+                  </div>
                 </div>
               </div>
 
+              {/* Action Buttons */}
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
                 <button
-                  onClick={() => {
-                    onClose();
-                  }}
+                  type="button"
+                  onClick={handlePrintReceipt}
+                  className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-mono font-semibold text-slate-300 bg-slate-900 border border-slate-700 hover:bg-slate-800 hover:text-white transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Printer className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Print / Save Receipt</span>
+                </button>
+
+                <button
+                  onClick={onClose}
                   className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-mono text-xs font-bold text-slate-950 bg-gradient-to-r from-cyan-400 to-sky-400 hover:from-cyan-300 hover:to-sky-300 transition-all cursor-pointer shadow-lg flex items-center justify-center gap-2"
                 >
                   <span>Start Learning Course Now</span>
@@ -246,57 +339,176 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({
             /* PAYMENT CHECKOUT FORM */
             <div className="space-y-6">
               
-              {/* Order Summary Card */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30 uppercase">
-                      {selectedCourse.category}
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">
-                      {selectedCourse.modulesCount} Chapters
-                    </span>
-                  </div>
-                  <h4 className="text-base font-bold text-white line-clamp-1">
-                    {selectedCourse.title}
-                  </h4>
-                  <p className="text-xs text-slate-400 line-clamp-1">
-                    Includes lifetime lectures, hands-on lab VMs, Q&A support & certificate.
-                  </p>
+              {/* Course Selection Dropdown (if user wants to view/enroll in another course) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-mono font-semibold text-slate-300 uppercase tracking-wider">
+                    Select Target Course:
+                  </label>
+                  <span className="text-[10px] font-mono text-cyan-400">
+                    Lifetime License & Labs
+                  </span>
+                </div>
+                <select
+                  value={selectedCourse.id}
+                  onChange={(e) => setSelectedCourseId(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-cyan-500 cursor-pointer"
+                >
+                  {COURSES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title} — PKR {c.pricePKR.toLocaleString()} (${c.priceUSD} USD)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* ITEMIZED BILLING BREAKDOWN TABLE: Course, Price, Discount, Tax / Fees, Total */}
+              <div className="rounded-xl bg-slate-950 border border-slate-800 overflow-hidden font-mono shadow-md">
+                <div className="px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileCheck2 className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Tuition & Fees Breakdown</span>
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/20">
+                    Live Rates (PKR & USD)
+                  </span>
                 </div>
 
-                <div className="text-left sm:text-right border-t sm:border-t-0 sm:border-l border-slate-800 pt-3 sm:pt-0 sm:pl-4 flex-shrink-0 font-mono">
-                  <div className="text-[10px] text-slate-400 uppercase">Total Payable:</div>
-                  <div className="text-xl font-extrabold text-cyan-300">
-                    PKR {finalPricePKR.toLocaleString()}
+                <div className="p-4 space-y-2.5 text-xs">
+                  {/* Row 1: Course */}
+                  <div className="flex items-start justify-between gap-4 pb-2 border-b border-slate-800/70">
+                    <div className="space-y-0.5">
+                      <div className="text-[10px] uppercase text-slate-400">Course:</div>
+                      <div className="font-bold text-white text-sm line-clamp-1">
+                        {selectedCourse.title}
+                      </div>
+                      <div className="text-[10px] text-cyan-400/80 flex items-center gap-2">
+                        <span>{selectedCourse.category}</span>
+                        <span>•</span>
+                        <span>{selectedCourse.modulesCount} Modules</span>
+                        <span>•</span>
+                        <span className="text-emerald-400">Complete Practical Labs</span>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0 text-slate-300 font-bold">
+                      PKR {originalPKR.toLocaleString()}
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-400">(${finalPriceUSD} USD)</div>
+
+                  {/* Row 2: Price */}
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800/70">
+                    <span className="text-slate-400">Price:</span>
+                    <span className="text-white font-medium">
+                      PKR {originalPKR.toLocaleString()} <span className="text-slate-400 text-[11px]">(${originalUSD} USD)</span>
+                    </span>
+                  </div>
+
+                  {/* Row 3: Discount */}
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800/70">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400">Discount:</span>
+                      {appliedPromoCode && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30">
+                          {appliedPromoCode} ({discountPercent}% OFF)
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={discountAmountPKR > 0 ? "text-emerald-400 font-bold" : "text-slate-400"}>
+                        {discountAmountPKR > 0 ? `-PKR ${discountAmountPKR.toLocaleString()} (-$${discountAmountUSD} USD)` : 'PKR 0 (0%)'}
+                      </span>
+                      {appliedPromoCode && (
+                        <button
+                          type="button"
+                          onClick={removeDiscount}
+                          className="text-[10px] text-red-400 hover:text-red-300 underline cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Row 4: Tax / Fees */}
+                  <div className="flex items-center justify-between py-1 border-b border-slate-800/70">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-400">Tax / Fees:</span>
+                      <span className="text-[10px] text-slate-400">
+                        (PST/GST & Payment Gateway)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-500/20">
+                        Waived
+                      </span>
+                      <span className="text-slate-300">
+                        PKR 0.00 <span className="text-slate-500 text-[11px]">($0.00 USD)</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Row 5: Total */}
+                  <div className="flex items-center justify-between pt-2">
+                    <div>
+                      <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider block">Total:</span>
+                      <span className="text-[10px] text-slate-400 font-normal">All-inclusive final payable</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg sm:text-xl font-extrabold text-cyan-300 font-mono">
+                        PKR {finalPricePKR.toLocaleString()}
+                      </div>
+                      <div className="text-xs text-slate-400 font-mono">
+                        (${finalPriceUSD} USD)
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Coupon / Fellowship Code Field */}
-              <form onSubmit={handleApplyPromo} className="flex gap-2">
-                <div className="relative flex-1">
-                  <Tag className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value)}
-                    placeholder="Coupon or Scholarship Code (e.g. CYBERSHIELD20)"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white uppercase font-mono focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-mono text-white border border-slate-700 transition-colors cursor-pointer"
-                >
-                  Apply Code
-                </button>
-              </form>
+              {/* Coupon / Fellowship Code Field with Quick One-Click Chips */}
+              <div className="space-y-2">
+                <form onSubmit={handleApplyPromo} className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Tag className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value)}
+                      placeholder="Enter Promo Code (e.g. CYBERSHIELD20)"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white uppercase font-mono focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-mono text-white border border-slate-700 transition-colors cursor-pointer"
+                  >
+                    Apply Code
+                  </button>
+                </form>
 
-              {promoMessage && (
-                <p className="text-xs font-mono text-emerald-400 -mt-3">{promoMessage}</p>
-              )}
+                {/* Quick 1-click promo code chips */}
+                <div className="flex items-center gap-2 flex-wrap text-[11px] font-mono">
+                  <span className="text-slate-400">Available Coupons:</span>
+                  <button
+                    type="button"
+                    onClick={() => applyCode('CYBERSHIELD20')}
+                    className="px-2 py-0.5 rounded bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/30 text-cyan-300 cursor-pointer transition-colors"
+                  >
+                    CYBERSHIELD20 (20% Off)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyCode('STUDENT50')}
+                    className="px-2 py-0.5 rounded bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/30 text-amber-300 cursor-pointer transition-colors"
+                  >
+                    STUDENT50 (50% Off)
+                  </button>
+                </div>
+
+                {promoMessage && (
+                  <p className="text-xs font-mono text-emerald-400 mt-1">{promoMessage}</p>
+                )}
+              </div>
 
               {/* Step 2: Payment Method Selector */}
               <div className="space-y-2">
