@@ -55,7 +55,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
   const handleDownloadTxt = () => {
     const certContent = `================================================================================
                     CYBERSHIELD-PK ACADEMY
-              CERTIFICATE PREVIEW — NOT A PREVIEW ONLY CREDENTIAL
+              CERTIFICATE PREVIEW — NOT VERIFIED
 ================================================================================
 
 This certifies that:
@@ -75,7 +75,6 @@ Issued by:
       Founder & Lead Cybersecurity Architect
       CyberShieldPK Defense Platform
 
-Accredited by:
       CyberShieldPK Cyber Warfare & Threat Intelligence Labs
 ================================================================================
 Online verification: Not configured. This file is a local preview only.
@@ -201,13 +200,13 @@ Online verification: Not configured. This file is a local preview only.
       ctx.textAlign = 'left';
       ctx.fillStyle = '#f59e0b';
       ctx.font = 'bold 18px monospace';
-      ctx.fillText('VERIFICATION SPECIFICATIONS:', 160, 750);
+      ctx.fillText('PREVIEW DETAILS:', 160, 750);
 
       ctx.fillStyle = '#94a3b8';
       ctx.font = '15px monospace';
       ctx.fillText(`Credential ID:   ${credentialId}`, 160, 785);
       ctx.fillText(`Date of Issue:   ${issueDate}`, 160, 815);
-      ctx.fillText(`Status:          PREVIEW ONLY — NOT PREVIEW ONLY`, 160, 845);
+      ctx.fillText(`Status:          PREVIEW ONLY — NOT VERIFIED`, 160, 845);
       ctx.fillText(`Signer Authority: Muhammad Zaib Zafar`, 160, 875);
 
       // Center: CyberShieldPK Medallion / Gold Seal
@@ -280,7 +279,7 @@ Online verification: Not configured. This file is a local preview only.
             </div>
             <div>
               <span className="text-[11px] font-mono font-bold text-amber-400 uppercase tracking-wider">
-                Official Certificate Preview ID
+                Certificate Preview ID
               </span>
               <h2 className="text-xs sm:text-base font-bold text-white truncate max-w-xs sm:max-w-md">
                 Course Completion Certificate
@@ -388,9 +387,9 @@ Online verification: Not configured. This file is a local preview only.
               </p>
             </div>
 
-            {/* Bottom Verification Details: QR & Cryptographic Seal, and Signatures */}
+            {/* Certificate Preview Details and Instructor Attribution */}
             <div className="relative z-10 mt-8 sm:mt-12 pt-6 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-6 items-center text-left">
-              {/* Left Column: Verification ID */}
+              {/* Left Column: Preview ID */}
               <div className="space-y-1 text-xs font-mono">
                 <div className="flex items-center gap-1.5 text-cyan-400 font-bold">
                   <QrCode className="w-4 h-4" />
