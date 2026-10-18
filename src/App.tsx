@@ -246,7 +246,7 @@ export default function App() {
   const VIEW_METADATA: Record<string, { title: string; subtitle: string; tag: string }> = {
     'academy': {
       title: 'CyberShieldPK Academy',
-      subtitle: 'Structured courses, practical modules, and verified industry-standard certificates.',
+      subtitle: 'Structured courses, practical modules, and course completion previews.',
       tag: 'ACADEMY COURSES'
     },
     'threat-feed': {
@@ -828,7 +828,7 @@ export default function App() {
         />
       )}
 
-      {/* Official Cryptographic Course Certificate Modal */}
+      {/* Course Completion Certificate Preview Modal */}
       {certificateCourse && (
         <CertificateModal
           course={certificateCourse}
