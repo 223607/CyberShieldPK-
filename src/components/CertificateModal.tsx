@@ -66,7 +66,7 @@ Lesson completion preview for:
 
 Course Category:     ${course.category}
 Curriculum Duration: ${course.duration} (${course.modulesCount} Chapters)
-Credential ID:       ${credentialId}
+Preview ID:          ${credentialId}
 Date of Issuance:    ${issueDate}
 Verification Status: Preview only; server-side verification is not configured
 
@@ -192,7 +192,7 @@ Online verification: Not configured. This file is a local preview only.
       ctx.fillText(`Category: ${course.category}  |  Course Duration: ${course.duration}`, 800, 625);
 
       // 9. Seals and Signatures Section
-      // Left: Cryptographic Security Badge
+      // Left: Preview details
       ctx.textAlign = 'left';
       ctx.fillStyle = '#f59e0b';
       ctx.font = 'bold 18px monospace';
@@ -203,7 +203,7 @@ Online verification: Not configured. This file is a local preview only.
       ctx.fillText(`Credential ID:   ${credentialId}`, 160, 785);
       ctx.fillText(`Date of Issue:   ${issueDate}`, 160, 815);
       ctx.fillText(`Status:          PREVIEW ONLY — NOT VERIFIED`, 160, 845);
-      ctx.fillText(`Signer Authority: Muhammad Zaib Zafar`, 160, 875);
+      ctx.fillText(`Prepared by:       Muhammad Zaib Zafar`, 160, 875);
 
       // Center: CyberShieldPK Medallion / Gold Seal
       ctx.beginPath();
