@@ -37,10 +37,13 @@ import { ComingSoonAndRoadmapsSection } from './components/ComingSoonAndRoadmaps
 import { InternshipSection } from './components/InternshipSection';
 import { InternshipModal } from './components/InternshipModal';
 import { SocSimulatorSection } from './components/SocSimulatorSection';
+import { AdminDashboard } from './components/admin/AdminDashboard';
+import { AdminUnauthorized } from './components/admin/AdminUnauthorized';
 
 import { DOMAINS } from './data/domains';
 import { Course, Lab, Article, Project, SecurityService, ResourceItem, DomainInfo } from './types';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { verifyAdminStatus, AdminAuthResult } from './lib/adminAuth';
 
 export default function App() {
   // Navigation & Modals State
@@ -65,6 +68,10 @@ export default function App() {
   // Certificate & Celebration States
   const [certificateCourse, setCertificateCourse] = useState<Course | null>(null);
   const [showFallingStars, setShowFallingStars] = useState<boolean>(false);
+
+  // Administrator Clearance State (Server-verified)
+  const [adminAuthResult, setAdminAuthResult] = useState<AdminAuthResult | null>(null);
+  const [isAdminChecking, setIsAdminChecking] = useState<boolean>(true);
 
   // User & Learning State with local persistence and Supabase synchronization
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string; role?: string } | null>(() => {
@@ -195,6 +202,44 @@ export default function App() {
     };
   }, []);
 
+  // Server-side Admin Role Verification
+  const checkAdmin = async () => {
+    setIsAdminChecking(true);
+    try {
+      const res = await verifyAdminStatus();
+      setAdminAuthResult(res);
+    } catch {
+      setAdminAuthResult({
+        isAuthenticated: false,
+        isAdmin: false,
+        isConfigured: isSupabaseConfigured,
+        user: null,
+        reason: 'network_error'
+      });
+    } finally {
+      setIsAdminChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    checkAdmin();
+  }, [currentUser]);
+
+  // Synchronize dedicated /admin URL route
+  useEffect(() => {
+    const syncRouteFromLocation = () => {
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      if (path === '/admin' || hash === '#admin') {
+        setActiveView('admin');
+      }
+    };
+
+    syncRouteFromLocation();
+    window.addEventListener('popstate', syncRouteFromLocation);
+    return () => window.removeEventListener('popstate', syncRouteFromLocation);
+  }, []);
+
   // Global Keyboard Shortcut (Cmd+K / Ctrl+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -233,10 +278,21 @@ export default function App() {
     }
 
     // 2. Direct page switching
-    if (id === 'hero' || id === 'home') {
+    if (id === 'admin') {
+      setActiveView('admin');
+      try {
+        window.history.pushState(null, '', '/admin');
+      } catch {}
+    } else if (id === 'hero' || id === 'home') {
       setActiveView('all');
+      try {
+        if (window.location.pathname === '/admin') window.history.pushState(null, '', '/');
+      } catch {}
     } else {
       setActiveView(id);
+      try {
+        if (window.location.pathname === '/admin') window.history.pushState(null, '', '/');
+      } catch {}
     }
 
     // 3. Instant top alignment without jumpy scroll animations
@@ -244,6 +300,11 @@ export default function App() {
   };
 
   const VIEW_METADATA: Record<string, { title: string; subtitle: string; tag: string }> = {
+    'admin': {
+      title: 'CyberShieldPK Administrator Console',
+      subtitle: 'Curriculum configuration, course authoring, student access, and order verification.',
+      tag: 'ADMIN CONSOLE'
+    },
     'academy': {
       title: 'CyberShieldPK Academy',
       subtitle: 'Structured courses, practical modules, and course completion previews.',
@@ -419,6 +480,51 @@ export default function App() {
     }
   };
 
+  if (activeView === 'admin') {
+    return (
+      <div className="min-h-screen bg-[#060c16] text-slate-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+        {isAdminChecking ? (
+          <div className="min-h-screen flex items-center justify-center p-6 text-center font-mono">
+            <div className="space-y-4">
+              <div className="w-10 h-10 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto" />
+              <p className="text-sm text-cyan-300 font-bold">Verifying Administrator Clearance...</p>
+              <p className="text-xs text-slate-500">Checking server-side PostgreSQL role & RLS policies</p>
+            </div>
+          </div>
+        ) : !adminAuthResult?.isAdmin ? (
+          <AdminUnauthorized
+            authResult={adminAuthResult}
+            onOpenAuth={() => setAuthModalOpen(true)}
+            onGoHome={() => handleNavigate('hero')}
+            onRetry={checkAdmin}
+          />
+        ) : (
+          <AdminDashboard
+            authResult={adminAuthResult}
+            onExit={() => handleNavigate('hero')}
+            onOpenLiveCourse={(c) => {
+              handleNavigate('academy');
+              handleStartCourse(c);
+            }}
+          />
+        )}
+
+        {/* Global Auth Modal if triggered from Admin screen */}
+        {authModalOpen && (
+          <AuthModal
+            isOpen={authModalOpen}
+            onClose={() => setAuthModalOpen(false)}
+            onSuccess={(user) => {
+              setCurrentUser(user);
+              setAuthModalOpen(false);
+              checkAdmin();
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#050b14] text-slate-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200 w-full max-w-full overflow-x-hidden">
       {/* 1. Global Navigation Bar */}
@@ -431,6 +537,7 @@ export default function App() {
         onOpenSocSimulator={() => setSocModalOpen(true)}
         currentUser={currentUser}
         activeView={activeView}
+        isAdmin={Boolean(adminAuthResult?.isAdmin)}
       />
 
       {/* When a specific menu view is selected, directly show its focused page with breadcrumb header */}
@@ -805,6 +912,8 @@ export default function App() {
           onSelectCourse={(c) => setActiveCourse(c)}
           onViewCertificate={handleOpenCertificate}
           onTriggerStars={handleTriggerFallingStars}
+          isAdmin={Boolean(adminAuthResult?.isAdmin)}
+          onOpenAdmin={() => handleNavigate('admin')}
         />
       )}
 

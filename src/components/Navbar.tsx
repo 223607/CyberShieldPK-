@@ -16,7 +16,8 @@ import {
   FileText,
   Briefcase,
   Layers,
-  Sparkles
+  Sparkles,
+  ShieldAlert
 } from 'lucide-react';
 import { DOMAINS } from '../data/domains';
 
@@ -29,6 +30,7 @@ interface NavbarProps {
   onOpenSocSimulator: () => void;
   currentUser: { name: string; email: string } | null;
   activeView?: string;
+  isAdmin?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -39,7 +41,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectDomain,
   onOpenSocSimulator,
   currentUser,
-  activeView = 'all'
+  activeView = 'all',
+  isAdmin = false
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -303,6 +306,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>Internship</span>
             <span className="text-[9px] px-1 bg-cyan-500/20 text-cyan-300 rounded font-bold">2026</span>
           </button>
+
+          {/* Admin Panel Link — Exclusively for Authenticated, Authorized Administrators */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => handleNavClick('admin')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 font-mono cursor-pointer ${
+                activeView === 'admin'
+                  ? 'bg-red-500/25 text-red-300 border border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.45)]'
+                  : 'text-red-400 hover:text-red-200 bg-red-950/60 hover:bg-red-900/70 border border-red-500/40 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
+              }`}
+              title="Access CyberShieldPK Administrator Panel"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+              <span>ADMIN PANEL</span>
+            </button>
+          )}
         </nav>
 
         {/* Right Actions: Search, SOC, Auth */}
@@ -390,6 +410,25 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           <div className="space-y-1">
+            {isAdmin && (
+              <button
+                onClick={() => handleNavClick('admin')}
+                className={`w-full text-left px-3 py-2.5 text-sm font-mono font-bold rounded-lg transition-colors flex items-center justify-between cursor-pointer mb-2 ${
+                  activeView === 'admin' 
+                    ? 'bg-red-950 text-red-300 border border-red-500/50 shadow-md' 
+                    : 'text-red-400 hover:bg-red-950/40 border border-red-500/30'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-red-400 animate-pulse" />
+                  <span>ADMIN PANEL</span>
+                </div>
+                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-red-950/80 text-red-300 border border-red-500/40">
+                  ADMIN ONLY
+                </span>
+              </button>
+            )}
+
             {navItems.map((item) => (
               <button
                 key={item.id}

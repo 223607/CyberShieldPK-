@@ -29,6 +29,8 @@ interface UserDashboardModalProps {
   onSelectCourse: (course: Course) => void;
   onViewCertificate?: (course: Course) => void;
   onTriggerStars?: () => void;
+  isAdmin?: boolean;
+  onOpenAdmin?: () => void;
 }
 
 export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
@@ -41,7 +43,9 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
   userNotes,
   onSelectCourse,
   onViewCertificate,
-  onTriggerStars
+  onTriggerStars,
+  isAdmin = false,
+  onOpenAdmin
 }) => {
   const [activeTab, setActiveTab] = useState<'courses' | 'labs' | 'certificates' | 'notes'>('courses');
 
@@ -79,6 +83,18 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {isAdmin && onOpenAdmin && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenAdmin();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-bold text-red-300 hover:text-red-200 bg-red-950/60 hover:bg-red-900/60 rounded-lg border border-red-500/40 transition-colors shadow-sm"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-red-400" />
+                <span>Admin Console</span>
+              </button>
+            )}
             <button
               onClick={onLogout}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded-lg border border-rose-500/20 transition-colors"
