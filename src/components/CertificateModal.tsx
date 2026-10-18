@@ -58,7 +58,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
               CERTIFICATE PREVIEW — NOT VERIFIED
 ================================================================================
 
-This certifies that:
+Certificate preview for:
       >>> ${studentName} <<<
 
 Lesson completion preview for:
@@ -70,12 +70,8 @@ Credential ID:       ${credentialId}
 Date of Issuance:    ${issueDate}
 Verification Status: Preview only; server-side verification is not configured
 
-Issued by:
-      Muhammad Zaib Zafar
-      Founder & Lead Cybersecurity Architect
-      CyberShieldPK Defense Platform
+Prepared by CyberShieldPK Academy (local preview only)
 
-      CyberShieldPK Cyber Warfare & Threat Intelligence Labs
 ================================================================================
 Online verification: Not configured. This file is a local preview only.
 ================================================================================`;
@@ -166,7 +162,7 @@ Online verification: Not configured. This file is a local preview only.
 
       ctx.fillStyle = '#f59e0b';
       ctx.font = 'italic 20px serif';
-      ctx.fillText('This is to proudly certify that', 800, 340);
+      ctx.fillText('Preview only — not an official or verified credential', 800, 340);
 
       // 6. Recipient Name
       ctx.fillStyle = '#38bdf8';
@@ -247,7 +243,7 @@ Online verification: Not configured. This file is a local preview only.
       ctx.font = '14px sans-serif';
       ctx.fillText('Founder & Lead Cybersecurity Architect, CyberShieldPK', 1440, 870);
 
-      // 10. Bottom Security Hash
+      // 10. Preview disclaimer
       ctx.textAlign = 'center';
       ctx.fillStyle = '#475569';
       ctx.font = '12px monospace';
@@ -323,7 +319,7 @@ Online verification: Not configured. This file is a local preview only.
             <div className="relative z-10 space-y-2">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 font-mono text-xs uppercase tracking-widest">
                 <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                <span>CyberShieldPK Cyber Warfare & Defense Academy</span>
+                <span>CyberShieldPK Academy</span>
               </div>
               <p className="text-[11px] font-mono text-slate-400 uppercase tracking-widest">
                 Center for Advanced Penetration Testing & Threat Intelligence
@@ -377,7 +373,7 @@ Online verification: Not configured. This file is a local preview only.
             {/* Course Information */}
             <div className="relative z-10 max-w-2xl mx-auto space-y-2">
               <p className="text-xs sm:text-sm text-slate-300">
-                has successfully fulfilled all curriculum requirements, hands-on vulnerability labs, and demonstrated mastery in:
+                recorded lesson progress for the following course:
               </p>
               <h3 className="text-lg sm:text-2xl font-bold text-white tracking-wide text-amber-300 font-mono py-1">
                 {course.title}
