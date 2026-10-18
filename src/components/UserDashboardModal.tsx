@@ -54,34 +54,9 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
     return allLessons.length > 0 && allLessons.every(l => completedLessonIds.includes(l.id));
   });
 
-  // If none strictly 100% yet, fallback to the flagship course for demonstration if user is enrolled
-  const certDisplayCourses = completedCourses.length > 0 
-    ? completedCourses 
-    : COURSES.filter(c => c.id === 'course-web-vapt' || enrolledCourseIds.includes(c.id)).slice(0, 2);
-
-  const handleDownloadCertificate = (courseTitle: string) => {
-    const certText = `=====================================================
-CYBERSHIELD-PK PROFESSIONAL CERTIFICATE OF COMPLETION
-=====================================================
-Issued to: ${user.name}
-Course: ${courseTitle}
-Issued Date: ${new Date().toLocaleDateString()}
-Verification ID: CS-PK-${Math.floor(100000 + Math.random() * 900000)}
-Signed by: Muhammad Zaib Zafar, Lead Instructor
-=====================================================
-Status: Cryptographically Verified & Logged
-=====================================================`;
-
-    const blob = new Blob([certText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `CyberShieldPK_Certificate_${user.name.replace(/\s+/g, '_')}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  // Only show certificates for courses whose lessons are actually complete.
+  // Online certificate verification is not configured yet.
+  const certDisplayCourses = completedCourses;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
