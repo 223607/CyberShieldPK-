@@ -243,7 +243,7 @@ export const CoursePlayerModal: React.FC<CoursePlayerModalProps> = ({
                   onGetCertificate(course);
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-mono font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 transition-all shadow-[0_0_15px_rgba(245,158,11,0.4)] animate-pulse cursor-pointer"
-                title="View your official completion certificate"
+                title="View your course completion certificate preview"
               >
                 <Award className="w-3.5 h-3.5" />
                 <span>Get Certificate 🎓</span>
@@ -305,7 +305,7 @@ export const CoursePlayerModal: React.FC<CoursePlayerModalProps> = ({
                       🎉 Course & Final Examination Passed!
                     </div>
                     <p className="text-[11px] text-slate-300">
-                      Your verifiable cryptographic certificate signed by Muhammad Zaib Zafar is ready.
+                      Your course completion certificate preview is ready. Online verification is not configured yet.
                     </p>
                   </div>
                 </div>
