@@ -12,7 +12,7 @@ import {
   KeyRound
 } from 'lucide-react';
 import { Course } from '../types';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -41,25 +41,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendStatus, setResendStatus] = useState<string | null>(null);
 
-  // Friendly error formatter
+  // Friendly user error formatter adhering to specification
   const formatAuthError = (err: any): string => {
-    if (!err) return 'An unexpected error occurred. Please try again.';
+    if (!err) return 'Unable to connect to the authentication service. Please try again.';
     const msg = typeof err === 'string' ? err : err.message || '';
     
     if (msg.toLowerCase().includes('email not confirmed')) {
-      return 'Your email has not been verified yet. Please check your inbox for the confirmation link.';
+      return 'Please verify your email first.';
     }
-    if (msg.toLowerCase().includes('invalid login credentials')) {
-      return 'Incorrect email or password. Please try again.';
+    if (msg.toLowerCase().includes('invalid login credentials') || msg.toLowerCase().includes('invalid_grant')) {
+      return 'Invalid email or password.';
     }
-    if (msg.toLowerCase().includes('user already registered')) {
+    if (msg.toLowerCase().includes('user already registered') || msg.toLowerCase().includes('already registered')) {
       return 'An account with this email already exists. Please log in.';
     }
     if (msg.toLowerCase().includes('password should be at least')) {
       return 'Password must be at least 6 characters.';
     }
-    if (msg.toLowerCase().includes('network') || msg.toLowerCase().includes('fetch')) {
-      return 'Connection error. Please check your internet connection.';
+    if (
+      msg.toLowerCase().includes('network') || 
+      msg.toLowerCase().includes('fetch') ||
+      msg.toLowerCase().includes('failed to fetch') ||
+      msg.toLowerCase().includes('connection') ||
+      msg.toLowerCase().includes('authretryablefetcherror') ||
+      msg.toLowerCase().includes('unreachable')
+    ) {
+      return 'Unable to connect to the authentication service. Please try again.';
     }
     return msg;
   };
@@ -76,6 +83,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
+    if (!isSupabaseConfigured) {
+      setErrorMessage('Unable to connect to the authentication service. Please try again.');
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -85,6 +97,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       if (error) {
         if (error.message.toLowerCase().includes('email not confirmed')) {
+          setErrorMessage('Please verify your email first.');
           setMode('verify-notice');
           setLoading(false);
           return;
@@ -157,12 +170,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
+    if (!isSupabaseConfigured) {
+      setErrorMessage('Unable to connect to the authentication service. Please try again.');
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
         email: cleanEmail,
         password: password,
         options: {
+          emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
           data: {
             full_name: cleanName,
             name: cleanName,
@@ -172,7 +191,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       });
 
       if (error) {
-        setErrorMessage(formatAuthError(error));
+        if (error.message.toLowerCase().includes('email not confirmed')) {
+          setErrorMessage('Please verify your email first.');
+        } else {
+          setErrorMessage(formatAuthError(error));
+        }
         setLoading(false);
         return;
       }
@@ -225,10 +248,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
+    if (!isSupabaseConfigured) {
+      setErrorMessage('Unable to connect to the authentication service. Please try again.');
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: window.location.origin,
+        redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
       });
 
       if (error) {
@@ -248,6 +276,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (resendCooldown > 0) return;
     setResendStatus(null);
     setErrorMessage(null);
+
+    if (!isSupabaseConfigured) {
+      setErrorMessage('Unable to connect to the authentication service. Please try again.');
+      return;
+    }
 
     const cleanEmail = email.trim();
     if (!cleanEmail) {

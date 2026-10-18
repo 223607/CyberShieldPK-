@@ -40,7 +40,7 @@ import { SocSimulatorSection } from './components/SocSimulatorSection';
 
 import { DOMAINS } from './data/domains';
 import { Course, Lab, Article, Project, SecurityService, ResourceItem, DomainInfo } from './types';
-import { supabase } from './lib/supabase';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 export default function App() {
   // Navigation & Modals State
@@ -114,6 +114,8 @@ export default function App() {
 
   // Sync Supabase Auth Session
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
     const syncUserSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -386,10 +388,12 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.error('Sign out error:', err);
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.error('Sign out error:', err);
+      }
     }
     localStorage.removeItem('cybershield_user');
     localStorage.removeItem('cybershield_enrolled_courses');
