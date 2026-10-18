@@ -8,7 +8,6 @@ import {
   Bookmark, 
   LogOut, 
   CheckCircle2, 
-  Download, 
   ExternalLink,
   ShieldCheck,
   Calendar,
@@ -55,34 +54,9 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
     return allLessons.length > 0 && allLessons.every(l => completedLessonIds.includes(l.id));
   });
 
-  // If none strictly 100% yet, fallback to the flagship course for demonstration if user is enrolled
-  const certDisplayCourses = completedCourses.length > 0 
-    ? completedCourses 
-    : COURSES.filter(c => c.id === 'course-web-vapt' || enrolledCourseIds.includes(c.id)).slice(0, 2);
-
-  const handleDownloadCertificate = (courseTitle: string) => {
-    const certText = `=====================================================
-CYBERSHIELD-PK PROFESSIONAL CERTIFICATE OF COMPLETION
-=====================================================
-Issued to: ${user.name}
-Course: ${courseTitle}
-Issued Date: ${new Date().toLocaleDateString()}
-Verification ID: CS-PK-${Math.floor(100000 + Math.random() * 900000)}
-Signed by: Muhammad Zaib Zafar, Lead Instructor
-=====================================================
-Status: Cryptographically Verified & Logged
-=====================================================`;
-
-    const blob = new Blob([certText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `CyberShieldPK_Certificate_${user.name.replace(/\s+/g, '_')}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  // Only show certificates for courses whose lessons are actually complete.
+  // Online certificate verification is not configured yet.
+  const certDisplayCourses = completedCourses;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
@@ -251,14 +225,20 @@ Status: Cryptographically Verified & Logged
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
                 <span className="text-xs font-mono text-slate-400">
-                  Verified Academic Credentials ({certDisplayCourses.length})
+                  Course Completion Certificates ({certDisplayCourses.length})
                 </span>
               </div>
 
               <div className="space-y-3">
-                {certDisplayCourses.map((c) => (
-                  <div 
-                    key={c.id} 
+                {certDisplayCourses.length === 0 ? (
+                  <div className="text-center py-10 rounded-xl bg-slate-950/60 border border-slate-800 p-6 space-y-2">
+                    <Award className="w-8 h-8 text-slate-500 mx-auto" />
+                    <h4 className="text-sm font-semibold text-white">No completed courses yet</h4>
+                    <p className="text-xs text-slate-400">Finish all lessons and pass the course assessment to unlock a completion certificate preview.</p>
+                  </div>
+                ) : certDisplayCourses.map((c) => (
+                  <div
+                    key={c.id}
                     className="p-4 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all"
                   >
                     <div className="flex items-center gap-3">
@@ -267,35 +247,24 @@ Status: Cryptographically Verified & Logged
                       </div>
                       <div>
                         <h4 className="text-sm font-bold text-white line-clamp-1">{c.title}</h4>
-                        <p className="text-xs font-mono text-emerald-400 flex items-center gap-1 mt-0.5">
+                        <p className="text-xs font-mono text-slate-400 flex items-center gap-1 mt-0.5">
                           <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>Verified Certificate • Track: {c.category}</span>
+                          <span>Completion preview • Track: {c.category}</span>
                         </p>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {onViewCertificate && (
-                        <button
-                          onClick={() => {
-                            onViewCertificate(c);
-                            onTriggerStars?.();
-                          }}
-                          className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl font-mono text-xs font-semibold text-cyan-300 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 transition-colors cursor-pointer"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>View & Print</span>
-                        </button>
-                      )}
-
+                    {onViewCertificate && (
                       <button
-                        onClick={() => handleDownloadCertificate(c.title)}
-                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl font-mono text-xs font-semibold text-slate-950 bg-amber-400 hover:bg-amber-300 transition-colors cursor-pointer"
+                        onClick={() => {
+                          onViewCertificate(c);
+                          onTriggerStars?.();
+                        }}
+                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl font-mono text-xs font-semibold text-cyan-300 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 transition-colors cursor-pointer"
                       >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Download</span>
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View Preview</span>
                       </button>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>

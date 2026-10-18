@@ -34,7 +34,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const certContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Derive stable cryptographic credential ID
+  // Display-only identifier; it is not a server-issued or verified credential.
   const credentialId = `CS-PK-${course.id.replace('course-', '').toUpperCase().slice(0, 4)}-${Math.abs(course.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 1024) * 89).toString().slice(0, 6)}`;
   const issueDate = new Date().toLocaleDateString('en-US', {
     month: 'long',
@@ -55,30 +55,25 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
   const handleDownloadTxt = () => {
     const certContent = `================================================================================
                     CYBERSHIELD-PK ACADEMY
-              OFFICIAL CERTIFICATE OF COMPLETION & COMPETENCY
+              CERTIFICATE PREVIEW — NOT VERIFIED
 ================================================================================
 
-This certifies that:
+Certificate preview for:
       >>> ${studentName} <<<
 
-Has successfully completed and demonstrated verified technical competency in:
+Lesson completion preview for:
       [ ${course.title} ]
 
 Course Category:     ${course.category}
 Curriculum Duration: ${course.duration} (${course.modulesCount} Chapters)
-Credential ID:       ${credentialId}
+Preview ID:          ${credentialId}
 Date of Issuance:    ${issueDate}
-Verification Status: Cryptographically Signed & Logged on CyberShield-PK Ledger
+Verification Status: Preview only; server-side verification is not configured
 
-Issued by:
-      Muhammad Zaib Zafar
-      Founder & Lead Cybersecurity Architect
-      CyberShieldPK Defense Platform
+Prepared by CyberShieldPK Academy (local preview only)
 
-Accredited by:
-      CyberShieldPK Cyber Warfare & Threat Intelligence Labs
 ================================================================================
-Verification URL: https://cybershieldpk.org/verify/${credentialId}
+Online verification: Not configured. This file is a local preview only.
 ================================================================================`;
 
     const blob = new Blob([certContent], { type: 'text/plain;charset=utf-8' });
@@ -154,11 +149,11 @@ Verification URL: https://cybershieldpk.org/verify/${credentialId}
       ctx.textAlign = 'center';
       ctx.fillStyle = '#22d3ee';
       ctx.font = 'bold 24px monospace';
-      ctx.fillText('CYBERSHIELD-PK ACADEMY • VERIFIED CREDENTIAL', 800, 150);
+      ctx.fillText('CYBERSHIELD-PK ACADEMY • CERTIFICATE PREVIEW', 800, 150);
 
       ctx.fillStyle = '#94a3b8';
       ctx.font = '16px monospace';
-      ctx.fillText('ISLAMABAD, PAKISTAN • OFFENSIVE & DEFENSIVE CYBER OPERATIONS', 800, 185);
+      ctx.fillText('ONLINE VERIFICATION NOT CONFIGURED', 800, 185);
 
       // 5. Main Title
       ctx.fillStyle = '#f8fafc';
@@ -167,7 +162,7 @@ Verification URL: https://cybershieldpk.org/verify/${credentialId}
 
       ctx.fillStyle = '#f59e0b';
       ctx.font = 'italic 20px serif';
-      ctx.fillText('This is to proudly certify that', 800, 340);
+      ctx.fillText('Preview only — not an official or verified credential', 800, 340);
 
       // 6. Recipient Name
       ctx.fillStyle = '#38bdf8';
@@ -185,7 +180,7 @@ Verification URL: https://cybershieldpk.org/verify/${credentialId}
       // 7. Statement of Completion
       ctx.fillStyle = '#cbd5e1';
       ctx.font = '20px sans-serif';
-      ctx.fillText('has successfully mastered all curriculum modules, technical assessments, and practical labs for:', 800, 500);
+      ctx.fillText('completion preview for the course:', 800, 500);
 
       // 8. Course Title
       ctx.fillStyle = '#ffffff';
@@ -194,21 +189,21 @@ Verification URL: https://cybershieldpk.org/verify/${credentialId}
 
       ctx.fillStyle = '#a5b4fc';
       ctx.font = '20px monospace';
-      ctx.fillText(`Category: ${course.category}  |  Accredited Duration: ${course.duration}`, 800, 625);
+      ctx.fillText(`Category: ${course.category}  |  Course Duration: ${course.duration}`, 800, 625);
 
       // 9. Seals and Signatures Section
-      // Left: Cryptographic Security Badge
+      // Left: Preview details
       ctx.textAlign = 'left';
       ctx.fillStyle = '#f59e0b';
       ctx.font = 'bold 18px monospace';
-      ctx.fillText('VERIFICATION SPECIFICATIONS:', 160, 750);
+      ctx.fillText('PREVIEW DETAILS:', 160, 750);
 
       ctx.fillStyle = '#94a3b8';
       ctx.font = '15px monospace';
       ctx.fillText(`Credential ID:   ${credentialId}`, 160, 785);
       ctx.fillText(`Date of Issue:   ${issueDate}`, 160, 815);
-      ctx.fillText(`Status:          AUTHENTIC & VERIFIED`, 160, 845);
-      ctx.fillText(`Signer Authority: Muhammad Zaib Zafar`, 160, 875);
+      ctx.fillText(`Status:          PREVIEW ONLY — NOT VERIFIED`, 160, 845);
+      ctx.fillText(`Prepared by:       Muhammad Zaib Zafar`, 160, 875);
 
       // Center: CyberShieldPK Medallion / Gold Seal
       ctx.beginPath();
@@ -223,10 +218,10 @@ Verification URL: https://cybershieldpk.org/verify/${credentialId}
       ctx.fillStyle = '#f59e0b';
       ctx.font = 'bold 15px monospace';
       ctx.fillText('CYBERSHIELD-PK', 800, 810);
-      ctx.fillText('OFFICIAL SEAL', 800, 830);
+      ctx.fillText('PREVIEW MARK', 800, 830);
       ctx.fillStyle = '#22d3ee';
       ctx.font = 'bold 12px monospace';
-      ctx.fillText('VERIFIED 2026', 800, 850);
+      ctx.fillText('PREVIEW ONLY', 800, 850);
 
       // Right: Lead Instructor Signature
       ctx.textAlign = 'right';
@@ -248,11 +243,11 @@ Verification URL: https://cybershieldpk.org/verify/${credentialId}
       ctx.font = '14px sans-serif';
       ctx.fillText('Founder & Lead Cybersecurity Architect, CyberShieldPK', 1440, 870);
 
-      // 10. Bottom Security Hash
+      // 10. Preview disclaimer
       ctx.textAlign = 'center';
       ctx.fillStyle = '#475569';
       ctx.font = '12px monospace';
-      ctx.fillText(`SHA-256 HASH VERIFICATION: 9b1e4c70d8a4f6e3c2b1897e45ad9821c34a0289fd1876e4cba29402847aef12`, 800, 990);
+      ctx.fillText(`ONLINE VERIFICATION NOT CONFIGURED • PREVIEW ONLY`, 800, 990);
 
       // Download triggered
       const imgData = canvas.toDataURL('image/png');
@@ -280,7 +275,7 @@ Verification URL: https://cybershieldpk.org/verify/${credentialId}
             </div>
             <div>
               <span className="text-[11px] font-mono font-bold text-amber-400 uppercase tracking-wider">
-                Official Credential Verification
+                Certificate Preview ID
               </span>
               <h2 className="text-xs sm:text-base font-bold text-white truncate max-w-xs sm:max-w-md">
                 Course Completion Certificate
@@ -324,7 +319,7 @@ Verification URL: https://cybershieldpk.org/verify/${credentialId}
             <div className="relative z-10 space-y-2">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 font-mono text-xs uppercase tracking-widest">
                 <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                <span>CyberShieldPK Cyber Warfare & Defense Academy</span>
+                <span>CyberShieldPK Academy</span>
               </div>
               <p className="text-[11px] font-mono text-slate-400 uppercase tracking-widest">
                 Center for Advanced Penetration Testing & Threat Intelligence
@@ -337,7 +332,7 @@ Verification URL: https://cybershieldpk.org/verify/${credentialId}
                 Certificate of Completion
               </h1>
               <p className="text-xs sm:text-sm font-serif italic text-amber-300 pt-2">
-                This credential officially verifies and certifies that
+                This local preview is for display only and is not a verified credential.
               </p>
             </div>
 
@@ -378,23 +373,23 @@ Verification URL: https://cybershieldpk.org/verify/${credentialId}
             {/* Course Information */}
             <div className="relative z-10 max-w-2xl mx-auto space-y-2">
               <p className="text-xs sm:text-sm text-slate-300">
-                has successfully fulfilled all curriculum requirements, hands-on vulnerability labs, and demonstrated mastery in:
+                recorded lesson progress for the following course:
               </p>
               <h3 className="text-lg sm:text-2xl font-bold text-white tracking-wide text-amber-300 font-mono py-1">
                 {course.title}
               </h3>
               <p className="text-xs font-mono text-slate-400">
-                Track: {course.category} • Accredited Duration: {course.duration} ({course.modulesCount} Chapters)
+                Track: {course.category} • Course Duration: {course.duration} ({course.modulesCount} Chapters)
               </p>
             </div>
 
-            {/* Bottom Verification Details: QR & Cryptographic Seal, and Signatures */}
+            {/* Certificate Preview Details and Instructor Attribution */}
             <div className="relative z-10 mt-8 sm:mt-12 pt-6 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-6 items-center text-left">
-              {/* Left Column: Verification ID */}
+              {/* Left Column: Preview ID */}
               <div className="space-y-1 text-xs font-mono">
                 <div className="flex items-center gap-1.5 text-cyan-400 font-bold">
                   <QrCode className="w-4 h-4" />
-                  <span>Credential Verification</span>
+                  <span>Certificate Preview ID</span>
                 </div>
                 <div className="text-[11px] text-slate-300">
                   ID: <span className="text-amber-400 font-bold">{credentialId}</span>
@@ -404,7 +399,7 @@ Verification URL: https://cybershieldpk.org/verify/${credentialId}
                 </div>
                 <div className="text-[10px] text-emerald-400 flex items-center gap-1">
                   <Check className="w-3 h-3" />
-                  <span>Cryptographically Authenticated</span>
+                  <span>Local preview • not server-verified</span>
                 </div>
               </div>
 
@@ -416,7 +411,7 @@ Verification URL: https://cybershieldpk.org/verify/${credentialId}
                     CyberShield
                   </span>
                   <span className="text-[8px] font-mono text-cyan-300 leading-tight">
-                    VERIFIED
+                    PREVIEW ONLY
                   </span>
                 </div>
               </div>
